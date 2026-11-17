@@ -1,19 +1,30 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { AppHeader } from "@/components/app-header";
+import { PageTransition } from "@/components/page-transition";
+import { EmptyState } from "@/components/ui/empty-state";
+import { accentStyle, getApp } from "@/lib/apps";
+
+const app = getApp("weekly-matchup");
 
 export const metadata: Metadata = {
-  title: "Fantasy Weekly Matchup Dashboard",
+  title: app.name,
 };
 
 export default function WeeklyMatchupHome() {
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-16">
-      <Link href="/" className="text-sm text-foreground/60 hover:text-foreground">
-        ← Fantasy Sports Hub
-      </Link>
-      <h1 className="mt-6 text-4xl font-semibold tracking-tight">
-        Fantasy Weekly Matchup Dashboard
-      </h1>
-    </main>
+    <PageTransition>
+      <main
+        style={accentStyle(app)}
+        className="mx-auto w-full max-w-6xl flex-1 px-4 pt-10 pb-20 sm:px-6 sm:pt-14"
+      >
+        <AppHeader app={app} />
+        <section className="mt-12">
+          <EmptyState
+            title="Your matchup hub is warming up"
+            description="This week's matchup and category breakdown will show up here."
+          />
+        </section>
+      </main>
+    </PageTransition>
   );
 }

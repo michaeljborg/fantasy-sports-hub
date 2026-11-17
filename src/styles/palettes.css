@@ -1,0 +1,55 @@
+/* ==========================================================================
+   Color palettes (TEMP: for picking a scheme with the Theme Lab)
+   --------------------------------------------------------------------------
+   Selected by <html data-palette="...">. The first block is the default.
+   Once a palette is chosen, keep only that block (as `:root`) and delete the
+   rest along with src/components/theme-lab.tsx.
+
+   Simple schemes: white + black, or white + one/two colors.
+   Each block sets:
+     --hue / --tint     gray tint (see theme.css); --tint 0 = pure gray
+     --brand / -fg      primary color and text on it
+     --accent-primary   main app accent (apps alternate primary/secondary)
+     --accent-secondary second app accent (second color, or black)
+   ========================================================================== */
+
+/* Scorebook: black on white */
+:root,
+[data-palette="scorebook"] {
+  --hue: 260;
+  --tint: 0;
+  --brand: light-dark(oklch(0.18 0 0), oklch(0.96 0 0));
+  --brand-fg: light-dark(oklch(1 0 0), oklch(0.16 0 0));
+  --accent-primary: var(--brand);
+  --accent-secondary: var(--brand);
+}
+
+/* Home Royal: royal blue + black on white */
+[data-palette="royal"] {
+  --hue: 262;
+  --tint: 0.4;
+  --brand: light-dark(oklch(0.48 0.2 262), oklch(0.7 0.16 258));
+  --brand-fg: light-dark(oklch(1 0 0), oklch(0.16 0.04 262));
+  --accent-primary: var(--brand);
+  --accent-secondary: light-dark(oklch(0.2 0 0), oklch(0.95 0 0));
+}
+
+/* Road Red: deep red + black on white */
+[data-palette="red"] {
+  --hue: 25;
+  --tint: 0.2;
+  --brand: light-dark(oklch(0.55 0.21 27), oklch(0.69 0.2 25));
+  --brand-fg: light-dark(oklch(1 0 0), oklch(0.16 0.04 25));
+  --accent-primary: var(--brand);
+  --accent-secondary: light-dark(oklch(0.2 0 0), oklch(0.95 0 0));
+}
+
+/* Court Purple: purple + black on white */
+[data-palette="purple"] {
+  --hue: 295;
+  --tint: 0.35;
+  --brand: light-dark(oklch(0.5 0.2 298), oklch(0.72 0.16 298));
+  --brand-fg: light-dark(oklch(1 0 0), oklch(0.16 0.04 298));
+  --accent-primary: var(--brand);
+  --accent-secondary: light-dark(oklch(0.2 0 0), oklch(0.95 0 0));
+}

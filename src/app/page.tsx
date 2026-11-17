@@ -1,54 +1,53 @@
-import Link from "next/link";
-
-type AppEntry = {
-  name: string;
-  description: string;
-  href: string;
-};
-
-const apps: AppEntry[] = [
-  {
-    name: "Fantasy Weekly Matchup Dashboard",
-    description:
-      "See this week's head-to-head matchup and which categories you're set to win, lose, or flip.",
-    href: "/weekly-matchup",
-  },
-  {
-    name: "Fantasy Draft Prep",
-    description: "Prepare rankings and strategy ahead of your draft.",
-    href: "/draft-prep",
-  },
-];
+import { AppCard } from "@/components/app-card";
+import { PageTransition } from "@/components/page-transition";
+import { apps } from "@/lib/apps";
 
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-center px-6 py-16">
-      <h1 className="text-4xl font-semibold tracking-tight">
-        Fantasy Sports Hub
-      </h1>
-      <p className="mt-3 text-lg text-foreground/70">
-        Your fantasy tools in one place.
-      </p>
+    <PageTransition>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-14 pb-20 sm:px-6 sm:pt-24">
+        <section className="max-w-3xl">
+          <p className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/60 px-3 py-1 text-xs font-semibold tracking-[0.16em] text-fg-muted uppercase backdrop-blur motion-safe:animate-rise">
+            <span className="relative flex size-2">
+              <span className="absolute inset-0 rounded-full bg-brand opacity-60 motion-safe:animate-ping" />
+              <span className="relative size-2 rounded-full bg-brand" />
+            </span>
+            Fantasy command center
+          </p>
+          <h1 className="mt-6 font-display text-5xl leading-[0.88] font-extrabold tracking-tight uppercase [animation-delay:80ms] motion-safe:animate-rise min-[400px]:text-6xl sm:text-8xl">
+            Win the week.
+            <br />
+            <span className="text-gradient-brand">Own the draft.</span>
+          </h1>
+          <p className="mt-6 max-w-xl text-lg text-fg-muted [animation-delay:160ms] motion-safe:animate-rise">
+            Matchups, drafts, trades and league history for your fantasy
+            leagues, all in one place.
+          </p>
+        </section>
 
-      <ul className="mt-10 grid gap-4 sm:grid-cols-2">
-        {apps.map((app) => (
-          <li
-            key={app.name}
-            className="flex flex-col rounded-xl border border-foreground/15 p-6"
-          >
-            <h2 className="text-lg font-medium">{app.name}</h2>
-            <p className="mt-2 flex-1 text-sm text-foreground/70">
-              {app.description}
-            </p>
-            <Link
-              href={app.href}
-              className="mt-6 inline-flex w-fit rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-90"
+        <section aria-labelledby="apps-heading" className="mt-16 sm:mt-24">
+          <div className="flex items-center gap-4">
+            <h2
+              id="apps-heading"
+              className="font-display text-sm font-bold tracking-[0.2em] text-fg-subtle uppercase"
             >
-              Open
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </main>
+              Your apps
+            </h2>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+          <ul className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {apps.map((app, i) => (
+              <li
+                key={app.id}
+                className="motion-safe:animate-rise"
+                style={{ animationDelay: `${240 + i * 60}ms` }}
+              >
+                <AppCard app={app} number={i + 1} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      </main>
+    </PageTransition>
   );
 }

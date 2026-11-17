@@ -1,0 +1,119 @@
+/* ==========================================================================
+   Fantasy Sports Hub: design tokens
+   --------------------------------------------------------------------------
+   Change the look of the whole app from this file.
+
+   - Every color token is `light-dark(<light value>, <dark value>)`.
+     The theme follows the OS; force one with <html data-theme="light|dark">.
+   - Components only use the semantic Tailwind classes mapped below
+     (bg-bg, bg-surface, text-fg, text-fg-muted, border-border, bg-brand, ...),
+     never raw colors, so editing a token restyles everything.
+   - Each app has its own accent (--accent-*). Components read it through the
+     generic `--accent` variable, set per app via `accentStyle()` in
+     src/lib/apps.ts.
+   ========================================================================== */
+
+:root {
+  color-scheme: light dark;
+
+  /*
+   * Palette inputs (--hue, --tint, --brand, --brand-fg, --accent-primary,
+   * --accent-secondary) are defined in src/styles/palettes.css.
+   * Neutrals below are tinted toward the palette's --hue; --tint scales how
+   * colorful the grays are (0 = pure gray).
+   */
+
+  /* Surfaces */
+  --bg: light-dark(
+    oklch(0.985 calc(0.004 * var(--tint)) var(--hue)),
+    oklch(0.15 calc(0.02 * var(--tint)) var(--hue))
+  );
+  --surface: light-dark(oklch(1 0 0), oklch(0.2 calc(0.024 * var(--tint)) var(--hue)));
+  --surface-muted: light-dark(
+    oklch(0.96 calc(0.007 * var(--tint)) var(--hue)),
+    oklch(0.25 calc(0.028 * var(--tint)) var(--hue))
+  );
+  --border: light-dark(oklch(0.25 0.03 var(--hue) / 0.1), oklch(1 0 0 / 0.08));
+  --border-strong: light-dark(oklch(0.25 0.03 var(--hue) / 0.2), oklch(1 0 0 / 0.16));
+  --grid-line: light-dark(oklch(0.25 0.03 var(--hue) / 0.07), oklch(1 0 0 / 0.045));
+  --highlight: light-dark(oklch(1 0 0 / 0.9), oklch(1 0 0 / 0.06));
+  --shadow-color: light-dark(oklch(0.3 0.04 var(--hue) / 0.12), oklch(0 0 0 / 0.5));
+
+  /* Text */
+  --fg: light-dark(
+    oklch(0.2 calc(0.03 * var(--tint)) var(--hue)),
+    oklch(0.97 calc(0.005 * var(--tint)) var(--hue))
+  );
+  --fg-muted: light-dark(
+    oklch(0.45 calc(0.025 * var(--tint)) var(--hue)),
+    oklch(0.76 calc(0.02 * var(--tint)) var(--hue))
+  );
+  --fg-subtle: light-dark(
+    oklch(0.58 calc(0.02 * var(--tint)) var(--hue)),
+    oklch(0.6 calc(0.02 * var(--tint)) var(--hue))
+  );
+
+  --ring: var(--brand);
+  --accent: var(--brand); /* overridden per app */
+
+  /* Status (win / close / lose, etc.) */
+  --success: light-dark(oklch(0.55 0.15 150), oklch(0.78 0.17 152));
+  --warning: light-dark(oklch(0.65 0.15 75), oklch(0.83 0.15 85));
+  --danger: light-dark(oklch(0.56 0.2 25), oklch(0.7 0.19 22));
+
+  /* Shape */
+  --radius: 1.25rem;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Map tokens to Tailwind utilities */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-brand: var(--brand);
+  --color-brand-fg: var(--brand-fg);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-barlow-condensed), var(--font-geist-sans), sans-serif;
+
+  --radius-card: var(--radius);
+
+  --shadow-card:
+    inset 0 1px 0 0 var(--highlight), 0 1px 2px 0 var(--shadow-color),
+    0 16px 40px -24px var(--shadow-color);
+}
+
+/* Motion tokens */
+@theme {
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-snappy: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --animate-rise: rise 700ms var(--ease-spring) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
