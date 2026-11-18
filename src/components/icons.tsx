@@ -112,7 +112,23 @@ export function GridIcon(props: IconProps) {
   );
 }
 
-export const appIcons: Record<AppId, (props: IconProps) => React.ReactNode> = {
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </Icon>
+  );
+}
+
+export function CheckIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M20 6 9 17l-5-5" />
+    </Icon>
+  );
+}
+
+export const appIcons:Record<AppId, (props: IconProps) => React.ReactNode> = {
   "weekly-matchup": MatchupIcon,
   "draft-prep": DraftIcon,
   "hall-of-fame": TrophyIcon,

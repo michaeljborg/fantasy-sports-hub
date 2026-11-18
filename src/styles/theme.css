@@ -105,6 +105,13 @@
   --ease-snappy: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   --animate-rise: rise 700ms var(--ease-spring) both;
+  --animate-fill: fill 900ms var(--ease-spring) both;
+
+  @keyframes fill {
+    from {
+      scale: 0 1;
+    }
+  }
 
   @keyframes rise {
     from {
