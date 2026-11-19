@@ -128,7 +128,55 @@ export function CheckIcon(props: IconProps) {
   );
 }
 
-export const appIcons:Record<AppId, (props: IconProps) => React.ReactNode> = {
+export function StarIcon({ filled, ...props }: IconProps & { filled?: boolean }) {
+  return (
+    <Icon fill={filled ? "currentColor" : "none"} {...props}>
+      <path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z" />
+    </Icon>
+  );
+}
+
+export function PlusIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </Icon>
+  );
+}
+
+export function CloseIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </Icon>
+  );
+}
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </Icon>
+  );
+}
+
+export function GripIcon(props: IconProps) {
+  return (
+    <Icon {...props} fill="currentColor" stroke="none">
+      {[6, 12, 18].map((y) => (
+        <g key={y}>
+          <circle cx="9" cy={y} r="1.6" />
+          <circle cx="15" cy={y} r="1.6" />
+        </g>
+      ))}
+    </Icon>
+  );
+}
+
+export const appIcons: Record<AppId, (props: IconProps) => React.ReactNode> = {
   "weekly-matchup": MatchupIcon,
   "draft-prep": DraftIcon,
   "hall-of-fame": TrophyIcon,

@@ -61,6 +61,16 @@
   --warning: light-dark(oklch(0.65 0.15 75), oklch(0.83 0.15 85));
   --danger: light-dark(oklch(0.56 0.2 25), oklch(0.7 0.19 22));
 
+  /* Position / note hues (draft prep badges, sticky notes) */
+  --hue-purple: light-dark(oklch(0.52 0.19 300), oklch(0.76 0.14 300));
+  --hue-blue: light-dark(oklch(0.52 0.16 250), oklch(0.76 0.13 250));
+  --hue-green: light-dark(oklch(0.54 0.14 160), oklch(0.78 0.14 160));
+  --hue-orange: light-dark(oklch(0.6 0.17 50), oklch(0.78 0.14 55));
+  --hue-amber: light-dark(oklch(0.62 0.14 80), oklch(0.83 0.13 85));
+  --hue-red: light-dark(oklch(0.55 0.19 25), oklch(0.72 0.17 22));
+  --hue-indigo: light-dark(oklch(0.5 0.17 275), oklch(0.76 0.13 275));
+  --hue-pink: light-dark(oklch(0.58 0.18 350), oklch(0.78 0.13 350));
+
   /* Shape */
   --radius: 1.25rem;
 }
