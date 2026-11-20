@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { CloseIcon, SearchIcon } from "@/components/icons";
-import type { HockeySlotLabel } from "@/lib/draft/hockey-roster-slots";
-import type { SlotLabel } from "@/lib/draft/roster-slots";
 import { cn } from "@/lib/navigation";
 
 /* ---------- Buttons ---------- */
@@ -34,6 +32,12 @@ const hues: Record<string, string> = {
   RW: "--hue-blue",
   D: "--hue-orange",
   G: "--hue-amber",
+  PG: "--hue-blue",
+  SG: "--hue-green",
+  SF: "--hue-orange",
+  PF: "--hue-red",
+  F: "--hue-indigo",
+  UTIL: "--hue-pink",
 };
 
 /** Colored position or roster-slot label. Bench (BN) is neutral. */
@@ -42,7 +46,8 @@ export function PositionBadge({
   muted,
   className,
 }: {
-  label: SlotLabel | HockeySlotLabel;
+  /** Position or roster slot, e.g. "RB", "W/R/T", "UTIL", "BN" */
+  label: string;
   muted?: boolean;
   className?: string;
 }) {

@@ -11,6 +11,7 @@ import { DraftSummary } from "./draft-tabs";
 const titles: Record<DraftSportId, string> = {
   football: "Football draft",
   hockey: "Hockey draft",
+  basketball: "Basketball draft",
 };
 
 /** Compact header for draft prep, matching the matchup dashboard header. */

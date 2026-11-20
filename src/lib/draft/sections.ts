@@ -2,9 +2,9 @@ import type { DraftSportId } from "./types";
 
 const base = "/draft-prep";
 
-/** Draft prep tabs, in display order. Hockey only has the board. */
+/** Draft prep tabs, in display order. Hockey and basketball only have the board. */
 export const draftSections = [
-  { id: "board", label: "Draft Board", path: "", sports: ["football", "hockey"] },
+  { id: "board", label: "Draft Board", path: "", sports: ["football", "hockey", "basketball"] },
   { id: "my-teams", label: "My Teams", path: "/my-teams", sports: ["football"] },
   { id: "notes", label: "Notes", path: "/notes", sports: ["football"] },
   { id: "draft-tree", label: "Draft Tree", path: "/draft-tree", sports: ["football"] },

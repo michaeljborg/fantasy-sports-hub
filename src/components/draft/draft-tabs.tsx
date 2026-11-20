@@ -30,8 +30,11 @@ export function DraftTabs({ sport }: { sport: DraftSportId }) {
 
 /** One line under the title: the live draft settings. */
 export function DraftSummary({ sport }: { sport: DraftSportId }) {
-  const { football, hockey } = useDraft();
-  if (sport === "hockey") return <>{hockey.myTeamName}, {hockey.keepersPerTeam} keepers per team</>;
-  const { teams, slot, rounds } = football.config;
+  const draft = useDraft();
+  if (sport !== "football") {
+    const board = draft[sport];
+    return <>{board.myTeamName}, {board.keepersPerTeam} keepers per team</>;
+  }
+  const { teams, slot, rounds } = draft.football.config;
   return <>{teams} teams, pick {slot}, {rounds} rounds</>;
 }

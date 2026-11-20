@@ -1,9 +1,12 @@
 /**
- * Draft prep data shapes. Football and hockey. The mock data in
- * mock-football.ts / mock-hockey.ts fills these until a real source exists.
+ * Draft prep data shapes. Football, hockey and basketball. The mock data in
+ * mock-*.ts fills these until a real source exists.
  */
 
-export type DraftSportId = "football" | "hockey";
+export type DraftSportId = "football" | "hockey" | "basketball";
+
+/** Sports drafted on the keeper board (My Team + Draft Board). */
+export type KeeperSportId = "hockey" | "basketball";
 
 /* ---------- Football ---------- */
 
@@ -72,22 +75,30 @@ export type Note = {
   height: number;
 };
 
-/* ---------- Hockey ---------- */
+/* ---------- Keeper board (hockey, basketball) ---------- */
 
-export type HockeyPosition = "C" | "LW" | "RW" | "D" | "G";
-
-type HockeyPlayerBase = {
+/** What the keeper board needs from any player, whatever the sport. */
+export type KeeperPlayer = {
   id: string;
   name: string;
-  positions: HockeyPosition[];
+  /** Eligible positions, e.g. ["C", "RW"] */
+  positions: string[];
   team: string;
   /** Fantasy team that keeps this player, or "FA" if available in the draft. */
   rosterStatus: string;
   gamesPlayed: number;
-  fantasyPoints: number;
   rankPreSeason: number;
   /** Rank at the end of last season */
   rankCurrent: number;
+};
+
+/* ---------- Hockey ---------- */
+
+export type HockeyPosition = "C" | "LW" | "RW" | "D" | "G";
+
+type HockeyPlayerBase = KeeperPlayer & {
+  positions: HockeyPosition[];
+  fantasyPoints: number;
 };
 
 export type HockeySkater = HockeyPlayerBase & {
@@ -114,3 +125,22 @@ export type HockeyGoalie = HockeyPlayerBase & {
 };
 
 export type HockeyPlayer = HockeySkater | HockeyGoalie;
+
+/* ---------- Basketball ---------- */
+
+export type BasketballPosition = "PG" | "SG" | "SF" | "PF" | "C";
+
+/** Season per-game averages for standard 9-cat. */
+export type BasketballPlayer = KeeperPlayer & {
+  positions: BasketballPosition[];
+  minutes: number;
+  fgp: number;
+  ftp: number;
+  tpm: number;
+  pts: number;
+  reb: number;
+  ast: number;
+  stl: number;
+  blk: number;
+  to: number;
+};

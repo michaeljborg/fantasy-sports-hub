@@ -8,9 +8,9 @@
 import { createContext, use, useMemo, useState } from "react";
 import { addTreeNode, deleteTreeNode } from "@/lib/draft/draft-tree";
 import type { DraftPool } from "@/lib/draft/draft";
-import { buildHockeySlots, HOCKEY_ROSTER, type HockeySlotLabel } from "@/lib/draft/hockey-roster-slots";
+import { BASKETBALL_ROSTER, buildKeeperSlots, HOCKEY_ROSTER, type SlotDef } from "@/lib/draft/keeper-roster";
 import { getMyPicks } from "@/lib/draft/snake-draft";
-import type { DraftConfig, DraftTree, Note, NoteColor, Player, PlayerRef, SavedTeam, Selections } from "@/lib/draft/types";
+import type { DraftConfig, DraftTree, KeeperPlayer, Note, NoteColor, Player, PlayerRef, SavedTeam, Selections } from "@/lib/draft/types";
 
 export const NOTE_COLORS: NoteColor[] = ["yellow", "blue", "green", "pink", "purple", "white"];
 
@@ -158,61 +158,76 @@ function useDraftState(pool: DraftPool) {
     },
   };
 
-  /* ---------- Hockey ---------- */
-  const { myTeamName } = pool.hockey;
-  const [myPicksH, setMyPicksH] = useState<string[]>([]);
-  const [takenH, setTakenH] = useState<string[]>([]);
+  /* ---------- Keeper boards ---------- */
+  const hockey = useKeeperBoard(pool.hockey, HOCKEY_ROSTER);
+  const basketball = useKeeperBoard(pool.basketball, BASKETBALL_ROSTER);
+
+  return { football, hockey, basketball };
+}
+
+/**
+ * Keeper draft board (hockey, basketball): keepers fill your roster first,
+ * then each Draft click either marks a player taken by another team or, when
+ * "next pick is mine" is on, adds them to your team.
+ */
+function useKeeperBoard<P extends KeeperPlayer>(
+  pool: { players: P[]; myTeamName: string; keepersPerTeam: number },
+  roster: SlotDef[],
+) {
+  const { myTeamName } = pool;
+  const [myPicks, setMyPicks] = useState<string[]>([]);
+  const [taken, setTaken] = useState<string[]>([]);
   const [keepersLoaded, setKeepersLoaded] = useState(true);
   const [nextPickIsMine, setNextPickIsMine] = useState(false);
-  const [slotOverrides, setSlotOverrides] = useState<Partial<Record<string, HockeySlotLabel>>>({});
+  const [slotOverrides, setSlotOverrides] = useState<Record<string, string>>({});
 
-  const hockeyPlayers = useMemo(
-    () => (keepersLoaded ? pool.hockey.players : pool.hockey.players.map((p) => ({ ...p, rosterStatus: "FA" }))),
-    [pool.hockey.players, keepersLoaded],
+  const players = useMemo(
+    () => (keepersLoaded ? pool.players : pool.players.map((p) => ({ ...p, rosterStatus: "FA" }))),
+    [pool.players, keepersLoaded],
   );
-  const hockeyById = useMemo(() => Object.fromEntries(hockeyPlayers.map((p) => [p.id, p])), [hockeyPlayers]);
+  const playersById = useMemo(() => Object.fromEntries(players.map((p) => [p.id, p])), [players]);
   const myKeepers = useMemo(
-    () => hockeyPlayers.filter((p) => p.rosterStatus === myTeamName).map((p) => p.id),
-    [hockeyPlayers, myTeamName],
+    () => players.filter((p) => p.rosterStatus === myTeamName).map((p) => p.id),
+    [players, myTeamName],
   );
   // A pick made while keepers were unloaded stops counting once that player is kept again.
-  const myActivePicks = useMemo(() => myPicksH.filter((id) => hockeyById[id]?.rosterStatus === "FA"), [myPicksH, hockeyById]);
+  const myActivePicks = useMemo(() => myPicks.filter((id) => playersById[id]?.rosterStatus === "FA"), [myPicks, playersById]);
   const slots = useMemo(
-    () => buildHockeySlots([...myKeepers, ...myActivePicks], hockeyById, slotOverrides),
-    [myKeepers, myActivePicks, hockeyById, slotOverrides],
+    () => buildKeeperSlots(roster, [...myKeepers, ...myActivePicks], playersById, slotOverrides),
+    [roster, myKeepers, myActivePicks, playersById, slotOverrides],
   );
-  const rosterFull = myKeepers.length + myActivePicks.length >= HOCKEY_ROSTER.length;
+  const rosterFull = myKeepers.length + myActivePicks.length >= roster.length;
 
-  const hockey = {
-    players: hockeyPlayers,
-    playersById: hockeyById,
+  return {
+    players,
+    playersById,
     myTeamName,
-    keepersPerTeam: pool.hockey.keepersPerTeam,
+    keepersPerTeam: pool.keepersPerTeam,
     slots,
     rosterFull,
-    myPicks: new Set(myPicksH),
-    taken: new Set(takenH),
+    myPicks: new Set(myPicks),
+    taken: new Set(taken),
     keepersLoaded,
     nextPickIsMine,
-    canClear: myPicksH.length > 0 || takenH.length > 0,
+    canClear: myPicks.length > 0 || taken.length > 0,
 
     /** Drafts to your team when "next pick is mine" is on, otherwise marks the player taken. */
     draft(id: string) {
       if (nextPickIsMine) {
-        if (!rosterFull) setMyPicksH((prev) => (prev.includes(id) ? prev : [...prev, id]));
-        setTakenH((prev) => without(prev, id));
+        if (!rosterFull) setMyPicks((prev) => (prev.includes(id) ? prev : [...prev, id]));
+        setTaken((prev) => without(prev, id));
         setNextPickIsMine(false);
       } else {
-        setTakenH((prev) => (prev.includes(id) ? prev : [...prev, id]));
-        setMyPicksH((prev) => without(prev, id));
+        setTaken((prev) => (prev.includes(id) ? prev : [...prev, id]));
+        setMyPicks((prev) => without(prev, id));
       }
     },
     undo(id: string) {
-      setMyPicksH((prev) => without(prev, id));
-      setTakenH((prev) => without(prev, id));
+      setMyPicks((prev) => without(prev, id));
+      setTaken((prev) => without(prev, id));
       setSlotOverrides((prev) => omit(prev, id));
     },
-    moveToSlot(id: string, label: HockeySlotLabel) {
+    moveToSlot(id: string, label: string) {
       setSlotOverrides((prev) => ({ ...prev, [id]: label }));
     },
     toggleKeepers() {
@@ -222,19 +237,17 @@ function useDraftState(pool: DraftPool) {
       setNextPickIsMine((v) => !v);
     },
     clearPicks() {
-      setMyPicksH([]);
-      setTakenH([]);
+      setMyPicks([]);
+      setTaken([]);
     },
     resetBoard() {
-      setMyPicksH([]);
-      setTakenH([]);
+      setMyPicks([]);
+      setTaken([]);
       setSlotOverrides({});
       setNextPickIsMine(false);
       setKeepersLoaded(false);
     },
   };
-
-  return { football, hockey };
 }
 
 type DraftState = ReturnType<typeof useDraftState>;
@@ -253,4 +266,4 @@ export function useDraft() {
 }
 
 export type FootballState = DraftState["football"];
-export type HockeyState = DraftState["hockey"];
+export type KeeperBoardState = ReturnType<typeof useKeeperBoard<KeeperPlayer>>;

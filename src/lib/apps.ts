@@ -41,7 +41,7 @@ export const apps: FantasyApp[] = [
     name: "Fantasy Draft Prep",
     shortName: "Draft Prep",
     href: "/draft-prep",
-    tagline: "Football & hockey",
+    tagline: "Football, hockey & basketball",
     description:
       "Run a mock draft against your rankings, track tiers and your watchlist, and plan pick-by-pick scenarios.",
     tags: ["Rankings", "Tiers", "Draft scenarios"],
