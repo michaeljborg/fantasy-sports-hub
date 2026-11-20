@@ -6,6 +6,7 @@ import { SectionTabs, SectionTabsView } from "@/components/dashboard/section-tab
 import { PageTransition } from "@/components/page-transition";
 import { accentStyle, getApp } from "@/lib/apps";
 import { getDashboard, teamName } from "@/lib/fantasy/dashboard";
+import { sectionHref, sections, type SectionId } from "@/lib/fantasy/sections";
 import { teamsForSport, userTeams } from "@/lib/fantasy/teams";
 
 const app = getApp("weekly-matchup");
@@ -24,10 +25,11 @@ export default async function TeamLayout({ children, params }: LayoutProps<"/wee
   if (!d) notFound();
 
   const { wins, losses, ties } = d.score;
-  const badges = {
+  const badges: Partial<Record<SectionId, string>> = {
     matchup: `${wins}-${losses}-${ties}`,
     "sit-start": d.decisionDays.length ? String(d.decisionDays.length) : undefined,
   };
+  const tabs = sections.map((s) => ({ id: s.id, label: s.label, href: sectionHref(team, s.id), badge: badges[s.id] }));
   const teams = teamsForSport(d.sport).map((t) => ({ id: t.id, league: t.league, name: teamName(t.id) }));
 
   return (
@@ -45,8 +47,8 @@ export default async function TeamLayout({ children, params }: LayoutProps<"/wee
           sport={d.sport}
           leagueSize={d.leagueSize}
         />
-        <Suspense fallback={<SectionTabsView teamId={team} badges={badges} />}>
-          <SectionTabs teamId={team} badges={badges} />
+        <Suspense fallback={<SectionTabsView items={tabs} />}>
+          <SectionTabs items={tabs} />
         </Suspense>
         <div className="mt-6 sm:mt-8">{children}</div>
       </div>

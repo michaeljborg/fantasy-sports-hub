@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Original standalone Draft Prep app, kept for reference (not part of the hub).
+    "fantasy-draft-prep/**",
   ]),
 ]);
 

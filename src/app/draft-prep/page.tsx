@@ -1,30 +1,10 @@
-import type { Metadata } from "next";
-import { AppHeader } from "@/components/app-header";
-import { PageTransition } from "@/components/page-transition";
-import { EmptyState } from "@/components/ui/empty-state";
-import { accentStyle, getApp } from "@/lib/apps";
+import { redirect } from "next/navigation";
+import { sportHref } from "@/lib/draft/sections";
 
-const app = getApp("draft-prep");
+// A redirect can't render an instant UI, so skip instant-navigation validation here.
+export const instant = false;
 
-export const metadata: Metadata = {
-  title: app.name,
-};
-
-export default function DraftPrepHome() {
-  return (
-    <PageTransition>
-      <main
-        style={accentStyle(app)}
-        className="mx-auto w-full max-w-6xl flex-1 px-4 pt-10 pb-20 sm:px-6 sm:pt-14"
-      >
-        <AppHeader app={app} />
-        <section className="mt-12">
-          <EmptyState
-            title="Your draft room is being set up"
-            description="Rankings and draft strategy will show up here."
-          />
-        </section>
-      </main>
-    </PageTransition>
-  );
+/** The app entry point opens the football draft. */
+export default function DraftPrepEntry() {
+  redirect(sportHref("football"));
 }
