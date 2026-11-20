@@ -32,8 +32,7 @@ export function DraftTabs({ sport }: { sport: DraftSportId }) {
 export function DraftSummary({ sport }: { sport: DraftSportId }) {
   const draft = useDraft();
   if (sport !== "football") {
-    const board = draft[sport];
-    return <>{board.myTeamName}, {board.keepersPerTeam} keepers per team</>;
+    return <>{draft[sport].rosterSize} roster spots</>;
   }
   const { teams, slot, rounds } = draft.football.config;
   return <>{teams} teams, pick {slot}, {rounds} rounds</>;

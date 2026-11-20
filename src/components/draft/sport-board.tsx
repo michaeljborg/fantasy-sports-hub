@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import { ConfirmButton } from "@/components/ui/dialog";
 import { basketballPositions, skaterPositions } from "@/lib/draft/sports";
-import type { BasketballPlayer, HockeyGoalie, HockeySkater, KeeperPlayer, KeeperSportId } from "@/lib/draft/types";
+import type { BasketballPlayer, BoardPlayer, BoardSportId, HockeyGoalie, HockeySkater } from "@/lib/draft/types";
 import { cn } from "@/lib/navigation";
 import { BoardPanel } from "./board-panel";
 import { buttonStyles, PositionBadge, positionOptions, SearchField, Segmented, SelectField, SortTh, Switch, useSort } from "./controls";
-import { useDraft, type KeeperBoardState } from "./draft-state";
+import { useDraft, type BoardState } from "./draft-state";
 
 /* ---------- Per-sport columns ---------- */
 
@@ -15,7 +15,7 @@ type Column = {
   key: string;
   label: string;
   title?: string;
-  value: (p: KeeperPlayer) => number | string;
+  value: (p: BoardPlayer) => number | string;
   format?: (v: number) => string;
   /** Some columns (time on ice) are shown but not sortable. */
   sortable?: boolean;
@@ -24,20 +24,20 @@ type Column = {
 type View = {
   id: string;
   label: string;
-  includes: (p: KeeperPlayer) => boolean;
+  includes: (p: BoardPlayer) => boolean;
   positions?: readonly string[];
   columns: Column[];
 };
 
-const skater = (f: (p: HockeySkater) => number | string) => (p: KeeperPlayer) => f(p as HockeySkater);
-const goalie = (f: (p: HockeyGoalie) => number | string) => (p: KeeperPlayer) => f(p as HockeyGoalie);
-const hoops = (f: (p: BasketballPlayer) => number) => (p: KeeperPlayer) => f(p as BasketballPlayer);
+const skater = (f: (p: HockeySkater) => number | string) => (p: BoardPlayer) => f(p as HockeySkater);
+const goalie = (f: (p: HockeyGoalie) => number | string) => (p: BoardPlayer) => f(p as HockeyGoalie);
+const hoops = (f: (p: BasketballPlayer) => number) => (p: BoardPlayer) => f(p as BasketballPlayer);
 
 const oneDecimal = (v: number) => v.toFixed(1);
 const pct = (v: number) => v.toFixed(3).replace(/^0/, "");
 const fpts: Column = { key: "fpts", label: "FPTS", title: "Fantasy points", value: skater((p) => p.fantasyPoints), format: oneDecimal };
 
-const views: Record<KeeperSportId, View[]> = {
+const views: Record<BoardSportId, View[]> = {
   hockey: [
     {
       id: "skaters",
@@ -94,8 +94,8 @@ const views: Record<KeeperSportId, View[]> = {
 
 /* ---------- Board ---------- */
 
-/** Keeper draft: your roster on the left, the player pool on the right. */
-export function KeeperBoard({ sport }: { sport: KeeperSportId }) {
+/** Your roster on the left, the player pool on the right. */
+export function SportBoard({ sport }: { sport: BoardSportId }) {
   const board = useDraft()[sport];
   return (
     <div className="grid gap-6 lg:grid-cols-[24rem_minmax(0,1fr)]">
@@ -105,41 +105,26 @@ export function KeeperBoard({ sport }: { sport: KeeperSportId }) {
   );
 }
 
-function TeamPanel({ board: b }: { board: KeeperBoardState }) {
+function TeamPanel({ board: b }: { board: BoardState }) {
   return (
     <BoardPanel
       title="My Team"
       actions={
         <>
           <ConfirmButton
-            title="Clear picks?"
-            message="Removes every pick on the board, yours and other teams'. Your keepers stay."
-            confirmLabel="Clear picks"
-            onConfirm={b.clearPicks}
+            title="Clear the board?"
+            message="Removes every pick on the board, yours and other teams'."
+            confirmLabel="Clear board"
+            onConfirm={b.clearBoard}
             disabled={!b.canClear}
             className={buttonStyles.quiet}
           >
             Clear
           </ConfirmButton>
-          <ConfirmButton
-            title="Reset the board?"
-            message="Clears all picks and unloads keepers, back to a fresh draft."
-            confirmLabel="Reset board"
-            onConfirm={b.resetBoard}
-            className={buttonStyles.danger}
-          >
-            Reset
-          </ConfirmButton>
         </>
       }
       toolbar={
-        <div className="grid w-full divide-y divide-border">
-          <Switch
-            label="Keepers loaded"
-            description={b.keepersLoaded ? "Kept players are off the board" : "Everyone is available"}
-            checked={b.keepersLoaded}
-            onChange={b.toggleKeepers}
-          />
+        <div className="w-full">
           <Switch
             label="Next pick is mine"
             description={b.nextPickIsMine ? "Draft adds the player to your team" : "Draft marks a player taken by another team"}
@@ -149,11 +134,9 @@ function TeamPanel({ board: b }: { board: KeeperBoardState }) {
         </div>
       }
     >
-      <p className="px-5 pt-3 pb-1 text-xs text-fg-subtle sm:px-6">{b.myTeamName}</p>
       <ul>
         {b.slots.map((slot, i) => {
           const player = slot.playerId ? b.playersById[slot.playerId] : undefined;
-          const keeper = player?.rosterStatus === b.myTeamName;
           return (
             <li key={`${slot.label}-${i}`} className="flex items-center gap-2 border-b border-border px-5 py-2 text-sm last:border-0 sm:px-6">
               <PositionBadge label={slot.label} />
@@ -166,15 +149,9 @@ function TeamPanel({ board: b }: { board: KeeperBoardState }) {
                       {player.positions.length > 1 && <SlotMoves board={b} player={player} current={slot.label} />}
                     </span>
                   </span>
-                  {keeper ? (
-                    <span title="Keeper" className="rounded-full bg-(--accent)/12 px-2 py-0.5 text-[11px] font-semibold text-(--accent)">
-                      Keeper
-                    </span>
-                  ) : (
-                    <button type="button" onClick={() => b.undo(player.id)} className={cn(buttonStyles.danger, "px-2.5 py-0.5 text-xs")}>
-                      Undo
-                    </button>
-                  )}
+                  <button type="button" onClick={() => b.undo(player.id)} className={cn(buttonStyles.danger, "px-2.5 py-0.5 text-xs")}>
+                    Undo
+                  </button>
                 </>
               ) : (
                 <span className="ml-auto text-xs text-fg-subtle">Empty</span>
@@ -188,7 +165,7 @@ function TeamPanel({ board: b }: { board: KeeperBoardState }) {
 }
 
 /** Lets a multi-position player switch to another of their positions. */
-function SlotMoves({ board: b, player, current }: { board: KeeperBoardState; player: KeeperPlayer; current: string }) {
+function SlotMoves({ board: b, player, current }: { board: BoardState; player: BoardPlayer; current: string }) {
   return (
     <span className="flex gap-1">
       {player.positions.map((pos) => {
@@ -214,7 +191,7 @@ function SlotMoves({ board: b, player, current }: { board: KeeperBoardState; pla
   );
 }
 
-const baseSort: Record<string, (p: KeeperPlayer) => number | string> = {
+const baseSort: Record<string, (p: BoardPlayer) => number | string> = {
   pre: (p) => p.rankPreSeason,
   cur: (p) => p.rankCurrent,
   name: (p) => p.name,
@@ -222,7 +199,7 @@ const baseSort: Record<string, (p: KeeperPlayer) => number | string> = {
   gp: (p) => p.gamesPlayed,
 };
 
-function PlayersPanel({ board: b, sportViews }: { board: KeeperBoardState; sportViews: View[] }) {
+function PlayersPanel({ board: b, sportViews }: { board: BoardState; sportViews: View[] }) {
   const [viewId, setViewId] = useState(sportViews[0].id);
   const [position, setPosition] = useState("ALL");
   const [query, setQuery] = useState("");
@@ -247,14 +224,12 @@ function PlayersPanel({ board: b, sportViews }: { board: KeeperBoardState; sport
       });
   }, [b.players, view, position, query, sort.key, sort.dir]);
 
-  const myKeepers = b.players.filter((p) => p.rosterStatus === b.myTeamName).length;
-
   return (
     <BoardPanel
       title="Draft Board"
       actions={
         <span className="text-xs text-fg-muted">
-          {rows.length} players, {myKeepers} of {b.keepersPerTeam} keepers
+          {rows.length} players, {b.myPicks.size} of {b.rosterSize} drafted
         </span>
       }
       toolbar={
@@ -309,21 +284,17 @@ function PlayersPanel({ board: b, sportViews }: { board: KeeperBoardState; sport
   );
 }
 
-function PlayerRow({ board: b, player: p, columns }: { board: KeeperBoardState; player: KeeperPlayer; columns: Column[] }) {
-  const kept = p.rosterStatus !== "FA";
-  const myKeeper = p.rosterStatus === b.myTeamName;
-  // A pick from before keepers were reloaded doesn't count once the player is kept.
-  const mine = !kept && b.myPicks.has(p.id);
-  const takenByOther = !kept && !mine && b.taken.has(p.id);
-  const unavailable = kept || mine || takenByOther;
+function PlayerRow({ board: b, player: p, columns }: { board: BoardState; player: BoardPlayer; columns: Column[] }) {
+  const mine = b.myPicks.has(p.id);
+  const takenByOther = !mine && b.taken.has(p.id);
+  const unavailable = mine || takenByOther;
   const blocked = b.nextPickIsMine && b.rosterFull;
 
   return (
     <tr
-      title={myKeeper ? "Your keeper" : kept ? `Kept by ${p.rosterStatus}` : undefined}
       className={cn(
         "border-b border-border transition-colors duration-150",
-        myKeeper || mine ? "bg-(--accent)/8" : unavailable ? "text-fg-subtle" : "hover:bg-surface-muted/50",
+        mine ? "bg-(--accent)/8" : unavailable ? "text-fg-subtle" : "hover:bg-surface-muted/50",
       )}
     >
       <td className="py-1.5 pl-5 font-mono font-semibold sm:pl-6">{p.rankPreSeason}</td>
@@ -332,25 +303,21 @@ function PlayerRow({ board: b, player: p, columns }: { board: KeeperBoardState; 
       <td className="px-2 py-1.5">
         <span className="flex gap-1">
           {p.positions.map((pos) => (
-            <PositionBadge key={pos} label={pos} muted={unavailable && !myKeeper && !mine} />
+            <PositionBadge key={pos} label={pos} muted={takenByOther} />
           ))}
         </span>
       </td>
       <td className="px-2 py-1.5 font-mono text-xs text-fg-muted">{p.team}</td>
       <td className="px-2 py-1.5">
         {unavailable ? (
-          mine || takenByOther ? (
-            <button
-              type="button"
-              onClick={() => b.undo(p.id)}
-              title="Undo this pick"
-              className="rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-medium text-fg-muted transition-colors hover:bg-danger/12 hover:text-danger"
-            >
-              {mine ? "Mine" : "Taken"}
-            </button>
-          ) : (
-            <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-medium">{myKeeper ? "Keeper" : "Kept"}</span>
-          )
+          <button
+            type="button"
+            onClick={() => b.undo(p.id)}
+            title="Undo this pick"
+            className="rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-medium text-fg-muted transition-colors hover:bg-danger/12 hover:text-danger"
+          >
+            {mine ? "Mine" : "Taken"}
+          </button>
         ) : (
           <button
             type="button"

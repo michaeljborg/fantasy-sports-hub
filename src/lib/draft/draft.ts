@@ -10,12 +10,8 @@ import * as hockey from "./mock-hockey";
 export function getDraftPool() {
   return {
     football: { players: football.players, defaultConfig: football.defaultConfig },
-    hockey: { players: hockey.players, myTeamName: hockey.myTeamName, keepersPerTeam: hockey.keepersPerTeam },
-    basketball: {
-      players: basketball.players,
-      myTeamName: basketball.myTeamName,
-      keepersPerTeam: basketball.keepersPerTeam,
-    },
+    hockey: { players: hockey.players },
+    basketball: { players: basketball.players },
   };
 }
 

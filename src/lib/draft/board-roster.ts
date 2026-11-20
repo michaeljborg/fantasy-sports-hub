@@ -1,9 +1,9 @@
-import type { KeeperPlayer } from "./types";
+import type { BoardPlayer } from "./types";
 
 /** A roster slot and the positions it accepts. Bench ("BN") takes anyone. */
 export type SlotDef = { label: string; accepts: string[] | "any" };
 
-export type KeeperSlot = { label: string; playerId?: string };
+export type BoardSlot = { label: string; playerId?: string };
 
 const bench = (n: number): SlotDef[] => Array.from({ length: n }, () => ({ label: "BN", accepts: "any" }));
 
@@ -12,7 +12,7 @@ export const HOCKEY_ROSTER: SlotDef[] = [
   ...bench(4),
 ];
 
-/** Standard Yahoo 9-cat lineup: PG, SG, G, SF, PF, F, C, C, UTIL, UTIL, plus 3 bench. */
+/** Lineup: PG, SG, G, SF, PF, F, C, 5 UTIL, plus 3 bench. */
 export const BASKETBALL_ROSTER: SlotDef[] = [
   { label: "PG", accepts: ["PG"] },
   { label: "SG", accepts: ["SG"] },
@@ -21,9 +21,7 @@ export const BASKETBALL_ROSTER: SlotDef[] = [
   { label: "PF", accepts: ["PF"] },
   { label: "F", accepts: ["SF", "PF"] },
   { label: "C", accepts: ["C"] },
-  { label: "C", accepts: ["C"] },
-  { label: "UTIL", accepts: ["PG", "SG", "SF", "PF", "C"] },
-  { label: "UTIL", accepts: ["PG", "SG", "SF", "PF", "C"] },
+  ...Array.from({ length: 5 }, () => ({ label: "UTIL", accepts: ["PG", "SG", "SF", "PF", "C"] })),
   ...bench(3),
 ];
 
@@ -35,16 +33,16 @@ export function fitsSlot(slot: SlotDef, positions: string[]) {
 const specificity = (slot: SlotDef) => (slot.accepts === "any" ? 2 : slot.accepts.length === 1 ? 0 : 1);
 
 /**
- * Lays players onto the roster in the order given (keepers first, then picks).
+ * Lays your picks onto the roster in draft order.
  * Each takes the most specific open slot they're eligible for.
  * `slotOverrides` pins a player to a chosen slot label when one is open.
  */
-export function buildKeeperSlots(
+export function buildRosterSlots(
   template: SlotDef[],
   playerIds: string[],
-  playersById: Record<string, Pick<KeeperPlayer, "id" | "positions">>,
+  playersById: Record<string, Pick<BoardPlayer, "id" | "positions">>,
   slotOverrides: Record<string, string> = {},
-): KeeperSlot[] {
+): BoardSlot[] {
   const working = template.map((def) => ({ ...def, playerId: undefined as string | undefined }));
   const byPriority = [...working].sort((a, b) => specificity(a) - specificity(b));
 

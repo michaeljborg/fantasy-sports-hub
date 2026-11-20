@@ -8,9 +8,9 @@
 import { createContext, use, useMemo, useState } from "react";
 import { addTreeNode, deleteTreeNode } from "@/lib/draft/draft-tree";
 import type { DraftPool } from "@/lib/draft/draft";
-import { BASKETBALL_ROSTER, buildKeeperSlots, HOCKEY_ROSTER, type SlotDef } from "@/lib/draft/keeper-roster";
+import { BASKETBALL_ROSTER, buildRosterSlots, HOCKEY_ROSTER, type SlotDef } from "@/lib/draft/board-roster";
 import { getMyPicks } from "@/lib/draft/snake-draft";
-import type { DraftConfig, DraftTree, KeeperPlayer, Note, NoteColor, Player, PlayerRef, SavedTeam, Selections } from "@/lib/draft/types";
+import type { DraftConfig, DraftTree, BoardPlayer, Note, NoteColor, Player, PlayerRef, SavedTeam, Selections } from "@/lib/draft/types";
 
 export const NOTE_COLORS: NoteColor[] = ["yellow", "blue", "green", "pink", "purple", "white"];
 
@@ -158,56 +158,39 @@ function useDraftState(pool: DraftPool) {
     },
   };
 
-  /* ---------- Keeper boards ---------- */
-  const hockey = useKeeperBoard(pool.hockey, HOCKEY_ROSTER);
-  const basketball = useKeeperBoard(pool.basketball, BASKETBALL_ROSTER);
+  /* ---------- Single-board sports ---------- */
+  const hockey = useBoardDraft(pool.hockey.players, HOCKEY_ROSTER);
+  const basketball = useBoardDraft(pool.basketball.players, BASKETBALL_ROSTER);
 
   return { football, hockey, basketball };
 }
 
 /**
- * Keeper draft board (hockey, basketball): keepers fill your roster first,
- * then each Draft click either marks a player taken by another team or, when
- * "next pick is mine" is on, adds them to your team.
+ * Single draft board (hockey, basketball): each Draft click either marks a
+ * player taken by another team or, when "next pick is mine" is on, adds them
+ * to your roster.
  */
-function useKeeperBoard<P extends KeeperPlayer>(
-  pool: { players: P[]; myTeamName: string; keepersPerTeam: number },
-  roster: SlotDef[],
-) {
-  const { myTeamName } = pool;
+function useBoardDraft<P extends BoardPlayer>(pool: P[], roster: SlotDef[]) {
   const [myPicks, setMyPicks] = useState<string[]>([]);
   const [taken, setTaken] = useState<string[]>([]);
-  const [keepersLoaded, setKeepersLoaded] = useState(true);
   const [nextPickIsMine, setNextPickIsMine] = useState(false);
   const [slotOverrides, setSlotOverrides] = useState<Record<string, string>>({});
 
-  const players = useMemo(
-    () => (keepersLoaded ? pool.players : pool.players.map((p) => ({ ...p, rosterStatus: "FA" }))),
-    [pool.players, keepersLoaded],
-  );
-  const playersById = useMemo(() => Object.fromEntries(players.map((p) => [p.id, p])), [players]);
-  const myKeepers = useMemo(
-    () => players.filter((p) => p.rosterStatus === myTeamName).map((p) => p.id),
-    [players, myTeamName],
-  );
-  // A pick made while keepers were unloaded stops counting once that player is kept again.
-  const myActivePicks = useMemo(() => myPicks.filter((id) => playersById[id]?.rosterStatus === "FA"), [myPicks, playersById]);
+  const playersById = useMemo(() => Object.fromEntries(pool.map((p) => [p.id, p])), [pool]);
   const slots = useMemo(
-    () => buildKeeperSlots(roster, [...myKeepers, ...myActivePicks], playersById, slotOverrides),
-    [roster, myKeepers, myActivePicks, playersById, slotOverrides],
+    () => buildRosterSlots(roster, myPicks, playersById, slotOverrides),
+    [roster, myPicks, playersById, slotOverrides],
   );
-  const rosterFull = myKeepers.length + myActivePicks.length >= roster.length;
+  const rosterFull = myPicks.length >= roster.length;
 
   return {
-    players,
+    players: pool,
     playersById,
-    myTeamName,
-    keepersPerTeam: pool.keepersPerTeam,
+    rosterSize: roster.length,
     slots,
     rosterFull,
     myPicks: new Set(myPicks),
     taken: new Set(taken),
-    keepersLoaded,
     nextPickIsMine,
     canClear: myPicks.length > 0 || taken.length > 0,
 
@@ -230,22 +213,14 @@ function useKeeperBoard<P extends KeeperPlayer>(
     moveToSlot(id: string, label: string) {
       setSlotOverrides((prev) => ({ ...prev, [id]: label }));
     },
-    toggleKeepers() {
-      setKeepersLoaded((v) => !v);
-    },
     toggleNextPickIsMine() {
       setNextPickIsMine((v) => !v);
     },
-    clearPicks() {
-      setMyPicks([]);
-      setTaken([]);
-    },
-    resetBoard() {
+    clearBoard() {
       setMyPicks([]);
       setTaken([]);
       setSlotOverrides({});
       setNextPickIsMine(false);
-      setKeepersLoaded(false);
     },
   };
 }
@@ -266,4 +241,4 @@ export function useDraft() {
 }
 
 export type FootballState = DraftState["football"];
-export type KeeperBoardState = ReturnType<typeof useKeeperBoard<KeeperPlayer>>;
+export type BoardState = ReturnType<typeof useBoardDraft<BoardPlayer>>;

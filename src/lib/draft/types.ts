@@ -5,8 +5,8 @@
 
 export type DraftSportId = "football" | "hockey" | "basketball";
 
-/** Sports drafted on the keeper board (My Team + Draft Board). */
-export type KeeperSportId = "hockey" | "basketball";
+/** Sports drafted on the single board (My Team + Draft Board). */
+export type BoardSportId = "hockey" | "basketball";
 
 /* ---------- Football ---------- */
 
@@ -75,17 +75,15 @@ export type Note = {
   height: number;
 };
 
-/* ---------- Keeper board (hockey, basketball) ---------- */
+/* ---------- Single board (hockey, basketball) ---------- */
 
-/** What the keeper board needs from any player, whatever the sport. */
-export type KeeperPlayer = {
+/** What the board needs from any player, whatever the sport. */
+export type BoardPlayer = {
   id: string;
   name: string;
   /** Eligible positions, e.g. ["C", "RW"] */
   positions: string[];
   team: string;
-  /** Fantasy team that keeps this player, or "FA" if available in the draft. */
-  rosterStatus: string;
   gamesPlayed: number;
   rankPreSeason: number;
   /** Rank at the end of last season */
@@ -96,7 +94,7 @@ export type KeeperPlayer = {
 
 export type HockeyPosition = "C" | "LW" | "RW" | "D" | "G";
 
-type HockeyPlayerBase = KeeperPlayer & {
+type HockeyPlayerBase = BoardPlayer & {
   positions: HockeyPosition[];
   fantasyPoints: number;
 };
@@ -131,7 +129,7 @@ export type HockeyPlayer = HockeySkater | HockeyGoalie;
 export type BasketballPosition = "PG" | "SG" | "SF" | "PF" | "C";
 
 /** Season per-game averages for standard 9-cat. */
-export type BasketballPlayer = KeeperPlayer & {
+export type BasketballPlayer = BoardPlayer & {
   positions: BasketballPosition[];
   minutes: number;
   fgp: number;
