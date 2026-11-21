@@ -1,24 +1,32 @@
-import type { Player, Position } from "./types";
+import type { PlayerView } from "./sports";
+import type { Player } from "./types";
 
-export type PlayerSortKey = "rank" | "adp" | "name" | "team" | "bye";
-export type PositionFilter = Position | "ALL";
+/** "rank", "name", "team", or a stat column key */
+export type PlayerSortKey = string;
 
 export function sortPlayers(players: Player[], key: PlayerSortKey, dir: "asc" | "desc") {
-  const num = (v: number | undefined) => v ?? Infinity;
-  const cmp: Record<PlayerSortKey, (a: Player, b: Player) => number> = {
-    rank: (a, b) => a.rank - b.rank,
-    adp: (a, b) => num(a.adp) - num(b.adp),
-    bye: (a, b) => num(a.bye) - num(b.bye),
-    team: (a, b) => a.team.localeCompare(b.team),
-    name: (a, b) => a.name.localeCompare(b.name),
-  };
-  const sorted = [...players].sort(cmp[key]);
+  const value = (p: Player): number | string =>
+    key === "rank" ? p.rank : key === "name" ? p.name : key === "team" ? p.team : (p.stats[key] ?? Infinity);
+  const sorted = [...players].sort((a, b) => {
+    const x = value(a);
+    const y = value(b);
+    return typeof x === "string" && typeof y === "string" ? x.localeCompare(y) : Number(x) - Number(y);
+  });
   return dir === "asc" ? sorted : sorted.reverse();
 }
 
-export function filterPlayers(players: Player[], position: PositionFilter, query = "") {
+export function inView(player: Player, view: PlayerView) {
+  return !view.includes || player.positions.some((p) => view.includes!.includes(p));
+}
+
+export function filterPlayers(players: Player[], { view, position = "ALL", query = "" }: { view?: PlayerView; position?: string; query?: string }) {
   const q = query.trim().toLowerCase();
-  return players.filter((p) => (position === "ALL" || p.position === position) && p.name.toLowerCase().includes(q));
+  return players.filter(
+    (p) =>
+      (!view || inView(p, view)) &&
+      (position === "ALL" || p.positions.includes(position)) &&
+      p.name.toLowerCase().includes(q),
+  );
 }
 
 export type BoardRow = { kind: "pick"; pick: number } | { kind: "player"; player: Player };
@@ -33,8 +41,4 @@ export function withPickDividers(players: Player[], myPicks: number[]): BoardRow
   }
   while (i < myPicks.length) rows.push({ kind: "pick", pick: myPicks[i++] });
   return rows;
-}
-
-export function formatAdp(adp?: number) {
-  return adp != null ? adp.toFixed(1) : "–";
 }

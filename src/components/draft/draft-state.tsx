@@ -1,20 +1,21 @@
 "use client";
 
 /**
- * In-memory state for the draft prep app, shared by every tab. Nothing is
+ * In-memory draft state, one copy per sport, shared by every tab. Nothing is
  * saved yet: a refresh starts over from the mock data, like the dashboard.
  */
 
 import { createContext, use, useMemo, useState } from "react";
-import { addTreeNode, deleteTreeNode } from "@/lib/draft/draft-tree";
 import type { DraftPool } from "@/lib/draft/draft";
-import { buildHockeySlots, HOCKEY_ROSTER, type HockeySlotLabel } from "@/lib/draft/hockey-roster-slots";
+import { addTreeNode, deleteTreeNode } from "@/lib/draft/draft-tree";
+import { buildRosterSlots, rosterFor } from "@/lib/draft/roster";
 import { getMyPicks } from "@/lib/draft/snake-draft";
-import type { DraftConfig, DraftTree, Note, NoteColor, Player, PlayerRef, SavedTeam, Selections } from "@/lib/draft/types";
+import { getSport, type SportDef } from "@/lib/draft/sports";
+import type { DraftConfig, DraftSportId, DraftTree, Note, NoteColor, Player, PlayerRef, SavedTeam, Selections } from "@/lib/draft/types";
 
 export const NOTE_COLORS: NoteColor[] = ["yellow", "blue", "green", "pink", "purple", "white"];
 
-const ref = (p: PlayerRef): PlayerRef => ({ id: p.id, name: p.name, position: p.position, team: p.team });
+const ref = (p: PlayerRef): PlayerRef => ({ id: p.id, name: p.name, positions: p.positions, team: p.team });
 const without = <T,>(list: T[], item: T) => list.filter((x) => x !== item);
 function omit<T extends object>(obj: T, key: PropertyKey): T {
   const next = { ...obj };
@@ -22,44 +23,72 @@ function omit<T extends object>(obj: T, key: PropertyKey): T {
   return next;
 }
 
-function useDraftState(pool: DraftPool) {
-  /* ---------- Football ---------- */
-  const [config, setConfigState] = useState<DraftConfig>(pool.football.defaultConfig);
+/**
+ * One sport's draft. Snake draft settings give you pick numbers. The Draft
+ * button fills an armed pick, or your next open pick when "next pick is mine"
+ * is on, and otherwise marks the player taken by another team.
+ */
+function useSportDraft(sport: SportDef, pool: Player[]) {
+  const [config, setConfigState] = useState<DraftConfig>(sport.defaultConfig);
   const [selections, setSelections] = useState<Selections>({});
+  const [taken, setTaken] = useState<string[]>([]);
   const [armedPick, setArmedPick] = useState<number | null>(null);
+  const [nextPickIsMine, setNextPickIsMine] = useState(false);
+  const [slotOverrides, setSlotOverrides] = useState<Record<string, string>>({});
   const [rankEdits, setRankEdits] = useState<Record<string, number>>({});
   const [watchlist, setWatchlist] = useState<Set<string>>(new Set());
   const [savedTeams, setSavedTeams] = useState<SavedTeam[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [trees, setTrees] = useState<DraftTree[]>([]);
 
-  const players = useMemo(
-    () => pool.football.players.map((p) => ({ ...p, rank: rankEdits[p.id] ?? p.rank })),
-    [pool.football.players, rankEdits],
-  );
+  const players = useMemo(() => pool.map((p) => ({ ...p, rank: rankEdits[p.id] ?? p.rank })), [pool, rankEdits]);
   const playersById = useMemo(() => Object.fromEntries(players.map((p) => [p.id, p])), [players]);
   const myPicks = useMemo(() => getMyPicks(config).filter((pick) => pick <= players.length), [config, players.length]);
-  const drafted = useMemo(() => new Set(Object.values(selections).filter((id): id is string => !!id)), [selections]);
+  const mine = useMemo(() => new Set(Object.values(selections).filter((id): id is string => !!id)), [selections]);
+  const takenSet = useMemo(() => new Set(taken), [taken]);
+  const nextOpen = myPicks.find((pick) => !selections[pick]);
 
   // Once you draft someone, everyone ranked ahead of them is presumed gone.
   const impliedTaken = useMemo(() => {
-    const worst = Math.max(0, ...[...drafted].map((id) => playersById[id]?.rank ?? 0));
-    return new Set(players.filter((p) => p.rank <= worst && !drafted.has(p.id)).map((p) => p.id));
-  }, [drafted, playersById, players]);
+    const worst = Math.max(0, ...[...mine].map((id) => playersById[id]?.rank ?? 0));
+    return new Set(players.filter((p) => p.rank <= worst && !mine.has(p.id) && !takenSet.has(p.id)).map((p) => p.id));
+  }, [mine, takenSet, playersById, players]);
 
-  const football = {
+  const roster = useMemo(() => rosterFor(sport.starters, config.rounds), [sport.starters, config.rounds]);
+  const slots = useMemo(
+    () =>
+      buildRosterSlots(
+        roster,
+        myPicks.filter((pick) => selections[pick]).map((pick) => ({ pick, player: playersById[selections[pick]!] })),
+        slotOverrides,
+      ),
+    [roster, myPicks, selections, playersById, slotOverrides],
+  );
+
+  const pickOf = (id: string) => Number(Object.entries(selections).find(([, pid]) => pid === id)?.[0]);
+
+  return {
+    sport,
     players,
     playersById,
     config,
     myPicks,
     selections,
     armedPick,
-    drafted,
+    nextPickIsMine,
+    mine,
+    taken: takenSet,
     impliedTaken,
+    roster,
+    slots,
     watchlist,
     savedTeams,
     notes,
     trees,
+    /** Where the next Draft click sends a player. */
+    draftTarget: armedPick ?? (nextPickIsMine ? nextOpen : undefined),
+    rosterFull: nextOpen == null,
+    hasPicks: mine.size > 0 || taken.length > 0,
 
     setConfig(next: DraftConfig) {
       setConfigState({ ...next, slot: Math.min(next.slot, next.teams) });
@@ -70,25 +99,39 @@ function useDraftState(pool: DraftPool) {
     armPick(pick: number) {
       setArmedPick((prev) => (prev === pick ? null : pick));
     },
-    /** Undo a drafted player, or assign them to the armed pick. */
-    clickPlayer(id: string) {
-      if (drafted.has(id)) {
-        const entry = Object.entries(selections).find(([, pid]) => pid === id);
-        if (entry) setSelections((prev) => omit(prev, Number(entry[0])));
-        return;
-      }
-      if (armedPick == null) return;
-      setSelections((prev) => ({ ...prev, [armedPick]: id }));
-      setArmedPick(null);
+    toggleNextPickIsMine() {
+      setNextPickIsMine((v) => !v);
     },
-    /** Draft straight to your next open pick. */
-    draftPlayer(id: string) {
-      const next = myPicks.find((pick) => !selections[pick]);
-      if (next != null) setSelections((prev) => ({ ...prev, [next]: id }));
+
+    /** Fills the armed pick, or your next open pick, or marks the player taken. */
+    draft(id: string) {
+      const target = armedPick ?? (nextPickIsMine ? nextOpen : undefined);
+      if (target != null) {
+        setSelections((prev) => ({ ...prev, [target]: id }));
+        setTaken((prev) => without(prev, id));
+        setArmedPick(null);
+        setNextPickIsMine(false);
+      } else if (!armedPick && !nextPickIsMine) {
+        setTaken((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      }
+    },
+    /** Removes a player from your picks or from the taken list. */
+    undo(id: string) {
+      if (mine.has(id)) {
+        setSelections((prev) => omit(prev, pickOf(id)));
+        setSlotOverrides((prev) => omit(prev, id));
+      }
+      setTaken((prev) => without(prev, id));
+    },
+    moveToSlot(id: string, label: string) {
+      setSlotOverrides((prev) => ({ ...prev, [id]: label }));
     },
     clearBoard() {
       setSelections({});
+      setTaken([]);
       setArmedPick(null);
+      setNextPickIsMine(false);
+      setSlotOverrides({});
     },
     saveTeam() {
       const picks = myPicks
@@ -157,100 +200,30 @@ function useDraftState(pool: DraftPool) {
       setTrees((prev) => prev.map((t) => (t.id === treeId ? deleteTreeNode(t, nodeId) : t)));
     },
   };
-
-  /* ---------- Hockey ---------- */
-  const { myTeamName } = pool.hockey;
-  const [myPicksH, setMyPicksH] = useState<string[]>([]);
-  const [takenH, setTakenH] = useState<string[]>([]);
-  const [keepersLoaded, setKeepersLoaded] = useState(true);
-  const [nextPickIsMine, setNextPickIsMine] = useState(false);
-  const [slotOverrides, setSlotOverrides] = useState<Partial<Record<string, HockeySlotLabel>>>({});
-
-  const hockeyPlayers = useMemo(
-    () => (keepersLoaded ? pool.hockey.players : pool.hockey.players.map((p) => ({ ...p, rosterStatus: "FA" }))),
-    [pool.hockey.players, keepersLoaded],
-  );
-  const hockeyById = useMemo(() => Object.fromEntries(hockeyPlayers.map((p) => [p.id, p])), [hockeyPlayers]);
-  const myKeepers = useMemo(
-    () => hockeyPlayers.filter((p) => p.rosterStatus === myTeamName).map((p) => p.id),
-    [hockeyPlayers, myTeamName],
-  );
-  // A pick made while keepers were unloaded stops counting once that player is kept again.
-  const myActivePicks = useMemo(() => myPicksH.filter((id) => hockeyById[id]?.rosterStatus === "FA"), [myPicksH, hockeyById]);
-  const slots = useMemo(
-    () => buildHockeySlots([...myKeepers, ...myActivePicks], hockeyById, slotOverrides),
-    [myKeepers, myActivePicks, hockeyById, slotOverrides],
-  );
-  const rosterFull = myKeepers.length + myActivePicks.length >= HOCKEY_ROSTER.length;
-
-  const hockey = {
-    players: hockeyPlayers,
-    playersById: hockeyById,
-    myTeamName,
-    keepersPerTeam: pool.hockey.keepersPerTeam,
-    slots,
-    rosterFull,
-    myPicks: new Set(myPicksH),
-    taken: new Set(takenH),
-    keepersLoaded,
-    nextPickIsMine,
-    canClear: myPicksH.length > 0 || takenH.length > 0,
-
-    /** Drafts to your team when "next pick is mine" is on, otherwise marks the player taken. */
-    draft(id: string) {
-      if (nextPickIsMine) {
-        if (!rosterFull) setMyPicksH((prev) => (prev.includes(id) ? prev : [...prev, id]));
-        setTakenH((prev) => without(prev, id));
-        setNextPickIsMine(false);
-      } else {
-        setTakenH((prev) => (prev.includes(id) ? prev : [...prev, id]));
-        setMyPicksH((prev) => without(prev, id));
-      }
-    },
-    undo(id: string) {
-      setMyPicksH((prev) => without(prev, id));
-      setTakenH((prev) => without(prev, id));
-      setSlotOverrides((prev) => omit(prev, id));
-    },
-    moveToSlot(id: string, label: HockeySlotLabel) {
-      setSlotOverrides((prev) => ({ ...prev, [id]: label }));
-    },
-    toggleKeepers() {
-      setKeepersLoaded((v) => !v);
-    },
-    toggleNextPickIsMine() {
-      setNextPickIsMine((v) => !v);
-    },
-    clearPicks() {
-      setMyPicksH([]);
-      setTakenH([]);
-    },
-    resetBoard() {
-      setMyPicksH([]);
-      setTakenH([]);
-      setSlotOverrides({});
-      setNextPickIsMine(false);
-      setKeepersLoaded(false);
-    },
-  };
-
-  return { football, hockey };
 }
 
-type DraftState = ReturnType<typeof useDraftState>;
+export type SportDraft = ReturnType<typeof useSportDraft>;
 
-const DraftContext = createContext<DraftState | null>(null);
+const DraftContext = createContext<Record<DraftSportId, SportDraft> | null>(null);
+const SportContext = createContext<DraftSportId | null>(null);
 
+/** Holds every sport's draft so switching sports keeps your work. */
 export function DraftProvider({ pool, children }: { pool: DraftPool; children: React.ReactNode }) {
-  const state = useDraftState(pool);
-  return <DraftContext value={state}>{children}</DraftContext>;
+  const football = useSportDraft(getSport("football"), pool.football);
+  const hockey = useSportDraft(getSport("hockey"), pool.hockey);
+  const basketball = useSportDraft(getSport("basketball"), pool.basketball);
+  return <DraftContext value={{ football, hockey, basketball }}>{children}</DraftContext>;
 }
 
-export function useDraft() {
-  const state = use(DraftContext);
-  if (!state) throw new Error("useDraft must be used inside <DraftProvider>");
-  return state;
+/** Marks which sport the pages below belong to. */
+export function SportProvider({ sport, children }: { sport: DraftSportId; children: React.ReactNode }) {
+  return <SportContext value={sport}>{children}</SportContext>;
 }
 
-export type FootballState = DraftState["football"];
-export type HockeyState = DraftState["hockey"];
+/** The current sport's draft. */
+export function useSportState(): SportDraft {
+  const drafts = use(DraftContext);
+  const sport = use(SportContext);
+  if (!drafts || !sport) throw new Error("useSportState must be used inside <DraftProvider> and <SportProvider>");
+  return drafts[sport];
+}

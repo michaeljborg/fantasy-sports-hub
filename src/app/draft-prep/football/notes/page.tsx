@@ -4,7 +4,7 @@ import { PageTransition } from "@/components/page-transition";
 
 export const metadata: Metadata = { title: "Notes" };
 
-export default function NotesPage() {
+export default function FootballNotesPage() {
   return (
     <PageTransition>
       <NotesBoard />

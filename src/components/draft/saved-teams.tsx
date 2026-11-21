@@ -3,19 +3,19 @@
 import { useMemo, useState } from "react";
 import { CloseIcon } from "@/components/icons";
 import { EmptyState } from "@/components/ui/empty-state";
-import { buildPositionalSlots } from "@/lib/draft/roster-slots";
-import type { PlayerRef, SavedTeam, Selections } from "@/lib/draft/types";
+import { buildRosterSlots, rosterFor } from "@/lib/draft/roster";
+import type { SavedTeam } from "@/lib/draft/types";
 import { buttonStyles, Segmented } from "./controls";
-import { useDraft } from "./draft-state";
+import { useSportState } from "./draft-state";
 import { PickRow, rosterViews, type RosterView } from "./my-team-panel";
 
 const dateFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 /** Teams saved from the draft board. */
 export function SavedTeams() {
-  const { football } = useDraft();
+  const d = useSportState();
 
-  if (!football.savedTeams.length) {
+  if (!d.savedTeams.length) {
     return (
       <EmptyState
         title="No saved teams yet"
@@ -26,7 +26,7 @@ export function SavedTeams() {
 
   return (
     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-      {football.savedTeams.map((team) => (
+      {d.savedTeams.map((team) => (
         <SavedTeamCard key={team.id} team={team} />
       ))}
     </div>
@@ -34,20 +34,16 @@ export function SavedTeams() {
 }
 
 function SavedTeamCard({ team }: { team: SavedTeam }) {
-  const { football } = useDraft();
+  const d = useSportState();
   const [view, setView] = useState<RosterView>("positional");
 
   // Rebuild the roster from this team's own snapshot of its picks.
-  const { picks, selections, byId } = useMemo(() => {
-    const selections: Selections = {};
-    const byId: Record<string, PlayerRef> = {};
-    for (const { pick, player } of team.picks) {
-      selections[pick] = player.id;
-      byId[player.id] = player;
-    }
-    return { picks: team.picks.map((p) => p.pick), selections, byId };
-  }, [team.picks]);
-  const slots = useMemo(() => buildPositionalSlots(picks, selections, byId), [picks, selections, byId]);
+  const picks = useMemo(() => [...team.picks].sort((a, b) => a.pick - b.pick), [team.picks]);
+  const byId = useMemo(() => Object.fromEntries(team.picks.map(({ player }) => [player.id, player])), [team.picks]);
+  const slots = useMemo(
+    () => buildRosterSlots(rosterFor(d.sport.starters, team.config.rounds), picks),
+    [d.sport.starters, team.config.rounds, picks],
+  );
 
   return (
     <section className="flex flex-col overflow-hidden rounded-card border border-border bg-surface shadow-card">
@@ -56,7 +52,7 @@ function SavedTeamCard({ team }: { team: SavedTeam }) {
           <input
             value={team.name}
             aria-label="Team name"
-            onChange={(e) => football.renameTeam(team.id, e.target.value)}
+            onChange={(e) => d.renameTeam(team.id, e.target.value)}
             className="-mx-1 w-full rounded-md bg-transparent px-1 font-display text-2xl leading-tight font-bold uppercase outline-none hover:bg-surface-muted focus-visible:bg-surface-muted"
           />
           <p className="mt-1 text-xs text-fg-muted">
@@ -65,7 +61,7 @@ function SavedTeamCard({ team }: { team: SavedTeam }) {
         </div>
         <button
           type="button"
-          onClick={() => football.deleteTeam(team.id)}
+          onClick={() => d.deleteTeam(team.id)}
           aria-label={`Delete ${team.name}`}
           className={buttonStyles.icon + " hover:text-danger"}
         >
@@ -85,8 +81,8 @@ function SavedTeamCard({ team }: { team: SavedTeam }) {
                 player={slot.playerId ? byId[slot.playerId] : undefined}
               />
             ))
-          : picks.map((pick, i) => (
-              <PickRow key={pick} label={`R${i + 1}`} sublabel={`#${pick}`} player={byId[selections[pick]!]} />
+          : picks.map(({ pick, player }, i) => (
+              <PickRow key={pick} label={`R${i + 1}`} sublabel={`#${pick}`} player={player} />
             ))}
       </ul>
     </section>

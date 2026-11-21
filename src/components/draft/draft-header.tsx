@@ -11,6 +11,7 @@ import { DraftSummary } from "./draft-tabs";
 const titles: Record<DraftSportId, string> = {
   football: "Football draft",
   hockey: "Hockey draft",
+  basketball: "Basketball draft",
 };
 
 /** Compact header for draft prep, matching the matchup dashboard header. */
@@ -35,7 +36,7 @@ export function DraftHeader({ app, sport }: { app: FantasyApp; sport: DraftSport
               {titles[sport]}
             </h1>
             <p className="mt-2 text-sm text-fg-muted">
-              <DraftSummary sport={sport} />
+              <DraftSummary />
             </p>
           </div>
         </div>

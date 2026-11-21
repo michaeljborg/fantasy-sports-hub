@@ -18,14 +18,14 @@ import { getMyPicks } from "@/lib/draft/snake-draft";
 import type { DraftConfig, DraftTree } from "@/lib/draft/types";
 import { cn } from "@/lib/navigation";
 import { buttonStyles, PositionBadge, SelectField } from "./controls";
-import { useDraft } from "./draft-state";
+import { useSportState } from "./draft-state";
 import { TreePlayerPicker } from "./tree-player-picker";
 
 /** Branching "what if" scenarios: the list, or one scenario open in the editor. */
 export function DraftTrees() {
-  const { football } = useDraft();
+  const d = useSportState();
   const [openId, setOpenId] = useState<string | null>(null);
-  const open = football.trees.find((t) => t.id === openId);
+  const open = d.trees.find((t) => t.id === openId);
 
   return open ? <TreeEditor tree={open} onBack={() => setOpenId(null)} /> : <TreeList onOpen={setOpenId} />;
 }
@@ -33,7 +33,7 @@ export function DraftTrees() {
 const configLine = (c: DraftConfig) => `${c.teams} teams, pick ${c.slot}, ${c.rounds} rounds`;
 
 function TreeList({ onOpen }: { onOpen: (id: string) => void }) {
-  const { football: f } = useDraft();
+  const f = useSportState();
   const [picking, setPicking] = useState(false);
   const myPicks = useMemo(() => getMyPicks(f.config), [f.config]);
 
@@ -134,7 +134,7 @@ function TreeList({ onOpen }: { onOpen: (id: string) => void }) {
 const PAD = 24;
 
 function TreeEditor({ tree, onBack }: { tree: DraftTree; onBack: () => void }) {
-  const { football: f } = useDraft();
+  const f = useSportState();
   const picks = useMemo(() => getMyPicks(tree.config), [tree.config]);
   const { positioned, cols, maxDepth } = useMemo(() => layoutTree(tree.roots), [tree.roots]);
   const byId = useMemo(() => new Map(positioned.map((p) => [p.node.id, p])), [positioned]);
@@ -216,7 +216,7 @@ function TreeEditor({ tree, onBack }: { tree: DraftTree; onBack: () => void }) {
                 </div>
                 <div className="mt-1 flex min-w-0 items-center gap-1.5">
                   <span className="truncate text-sm font-semibold">{p.node.player.name}</span>
-                  <PositionBadge label={p.node.player.position} className="min-w-0" />
+                  <PositionBadge label={p.node.player.positions[0]} className="min-w-0" />
                 </div>
                 {p.depth + 1 < picks.length && (
                   <button

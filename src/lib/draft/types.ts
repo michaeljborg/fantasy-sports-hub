@@ -1,32 +1,29 @@
 /**
- * Draft prep data shapes. Football and hockey. The mock data in
- * mock-football.ts / mock-hockey.ts fills these until a real source exists.
+ * Draft prep data shapes, shared by every sport. Sport differences (positions,
+ * roster, stat columns, tiers) live in sports.ts. The mock-*.ts files fill
+ * these until a real source exists.
  */
 
-export type DraftSportId = "football" | "hockey";
-
-/* ---------- Football ---------- */
-
-export type Position = "QB" | "RB" | "WR" | "TE" | "K" | "DST";
+export type DraftSportId = "football" | "hockey" | "basketball";
 
 export type Player = {
   id: string;
   name: string;
-  position: Position;
+  /** Eligible positions, e.g. ["RB"] or ["C", "RW"] */
+  positions: string[];
   team: string;
-  /** Consensus rank, lower is better. Can be edited on the board. */
+  /** Overall rank, lower is better. Can be edited on the board. */
   rank: number;
-  bye?: number;
-  /** Average draft position */
-  adp?: number;
-  /** Overall (cross-position) tier, lower is better */
+  /** Overall tier, lower is better (football only for now) */
   tier?: number;
-  /** Tier within the player's own position, lower is better */
+  /** Tier within the player's first position (football only for now) */
   positionTier?: number;
+  /** Sport-specific columns, keyed by the column keys in sports.ts */
+  stats: Record<string, number | string>;
 };
 
 /** Just enough of a player to show it; snapshotted onto saved teams and trees. */
-export type PlayerRef = Pick<Player, "id" | "name" | "position" | "team">;
+export type PlayerRef = Pick<Player, "id" | "name" | "positions" | "team">;
 
 export type DraftConfig = { teams: number; slot: number; rounds: number };
 
@@ -71,46 +68,3 @@ export type Note = {
   width: number;
   height: number;
 };
-
-/* ---------- Hockey ---------- */
-
-export type HockeyPosition = "C" | "LW" | "RW" | "D" | "G";
-
-type HockeyPlayerBase = {
-  id: string;
-  name: string;
-  positions: HockeyPosition[];
-  team: string;
-  /** Fantasy team that keeps this player, or "FA" if available in the draft. */
-  rosterStatus: string;
-  gamesPlayed: number;
-  fantasyPoints: number;
-  rankPreSeason: number;
-  /** Rank at the end of last season */
-  rankCurrent: number;
-};
-
-export type HockeySkater = HockeyPlayerBase & {
-  kind: "skater";
-  /** Time on ice per game, e.g. "22:59" */
-  toiPerGame: string;
-  goals: number;
-  assists: number;
-  plusMinus: number;
-  powerPlayPoints: number;
-  shotsOnGoal: number;
-  hits: number;
-  blocks: number;
-};
-
-export type HockeyGoalie = HockeyPlayerBase & {
-  kind: "goalie";
-  /** Season total time on ice, e.g. "3,401:27" */
-  timeOnIce: string;
-  wins: number;
-  goalsAgainst: number;
-  saves: number;
-  shutouts: number;
-};
-
-export type HockeyPlayer = HockeySkater | HockeyGoalie;
