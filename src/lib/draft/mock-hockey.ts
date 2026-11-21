@@ -2,40 +2,37 @@
  * PLACEHOLDER DATA. Fictional players so the hockey board
  * has something to render. Replace with a real source; keep types.ts shapes.
  */
-import type { HockeyGoalie, HockeyPlayer, HockeyPosition, HockeySkater } from "./types";
+import type { Player } from "./types";
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
-let preRank = 0;
+let rank = 0;
 
 function skater(
-  name: string, positions: HockeyPosition[], team: string,
-  [gamesPlayed, fantasyPoints, rankCurrent]: [number, number, number],
-  [toiPerGame, goals, assists, plusMinus, powerPlayPoints, shotsOnGoal, hits, blocks]:
-    [string, number, number, number, number, number, number, number],
-): HockeySkater {
+  name: string, positions: string[], team: string,
+  [gp, fpts, cur]: [number, number, number],
+  [toi, g, a, pm, ppp, sog, hit, blk]: [string, number, number, number, number, number, number, number],
+): Player {
   return {
-    kind: "skater", id: `${slug(name)}-${positions[0].toLowerCase()}`, name, positions, team,
-    gamesPlayed, fantasyPoints, rankPreSeason: ++preRank, rankCurrent,
-    toiPerGame, goals, assists, plusMinus, powerPlayPoints, shotsOnGoal, hits, blocks,
+    id: `${slug(name)}-${positions[0].toLowerCase()}`, name, positions, team, rank: ++rank,
+    stats: { cur, gp, fpts, toi, g, a, pm, ppp, sog, hit, blk },
   };
 }
 
 function goalie(
   name: string, team: string,
-  [gamesPlayed, fantasyPoints, rankCurrent]: [number, number, number],
-  [timeOnIce, wins, goalsAgainst, saves, shutouts]: [string, number, number, number, number],
-): HockeyGoalie {
+  [gp, fpts, cur]: [number, number, number],
+  [toi, w, ga, sv, sho]: [string, number, number, number, number],
+): Player {
   return {
-    kind: "goalie", id: `${slug(name)}-g`, name, positions: ["G"], team,
-    gamesPlayed, fantasyPoints, rankPreSeason: ++preRank, rankCurrent,
-    timeOnIce, wins, goalsAgainst, saves, shutouts,
+    id: `${slug(name)}-g`, name, positions: ["G"], team, rank: ++rank,
+    stats: { cur, gp, fpts, toi, w, ga, sv, sho },
   };
 }
 
 
-// In pre-season rank order (shared across skaters and goalies).
-export const players: HockeyPlayer[] = [
+// In rank order (pre-season, shared across skaters and goalies).
+export const players: Player[] = [
   skater("Connor Blackwood", ["C"], "EDM", [82, 1084.2, 2], ["22:41", 49, 88, 18, 52, 301, 41, 29]),
   skater("Nils Lindqvist", ["C", "RW"], "COL", [80, 1062.5, 1], ["21:58", 52, 71, 34, 44, 322, 55, 31]),
   skater("Austin Reidel", ["C"], "TOR", [79, 998.7, 4], ["20:47", 58, 41, 12, 33, 344, 62, 40]),

@@ -2,9 +2,9 @@
  * PLACEHOLDER DATA. Fictional players so the draft board has something to
  * render. Replace with a real rankings source; keep the shapes from types.ts.
  */
-import type { DraftConfig, Player, Position } from "./types";
+import type { Player } from "./types";
 
-type Row = [name: string, position: Position, team: string, bye: number, adp: number, tier?: number, positionTier?: number];
+type Row = [name: string, position: string, team: string, bye: number, adp: number, tier?: number, positionTier?: number];
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
@@ -57,13 +57,11 @@ const rows: Row[] = [
 export const players: Player[] = rows.map(([name, position, team, bye, adp, tier, positionTier], i) => ({
   id: `${slug(name)}-${position.toLowerCase()}`,
   name,
-  position,
+  positions: [position],
   team,
   rank: i + 1,
-  bye,
-  adp,
   tier,
   positionTier,
+  stats: { adp, bye },
 }));
 
-export const defaultConfig: DraftConfig = { teams: 8, slot: 3, rounds: 5 };

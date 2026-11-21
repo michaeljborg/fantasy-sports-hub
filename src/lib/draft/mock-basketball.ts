@@ -2,28 +2,27 @@
  * PLACEHOLDER DATA. Fictional players so the basketball
  * board has something to render. Replace with a real source; keep types.ts shapes.
  */
-import type { BasketballPlayer, BasketballPosition } from "./types";
+import type { Player } from "./types";
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
-let preRank = 0;
+let rank = 0;
 
 function player(
-  name: string, positions: BasketballPosition[], team: string,
-  [gamesPlayed, rankCurrent]: [number, number],
-  [minutes, fgp, ftp, tpm, pts, reb, ast, stl, blk, to]:
+  name: string, positions: string[], team: string,
+  [gp, cur]: [number, number],
+  [min, fgp, ftp, tpm, pts, reb, ast, stl, blk, to]:
     [number, number, number, number, number, number, number, number, number, number],
-): BasketballPlayer {
+): Player {
   return {
-    id: `${slug(name)}-${positions[0].toLowerCase()}`, name, positions, team,
-    gamesPlayed, rankPreSeason: ++preRank, rankCurrent,
-    minutes, fgp, ftp, tpm, pts, reb, ast, stl, blk, to,
+    id: `${slug(name)}-${positions[0].toLowerCase()}`, name, positions, team, rank: ++rank,
+    stats: { cur, gp, min, fgp, ftp, tpm, pts, reb, ast, stl, blk, to },
   };
 }
 
 
-// In pre-season rank order.
-export const players: BasketballPlayer[] = [
+// In rank order (pre-season).
+export const players: Player[] = [
   player("Theo Adeyemi", ["C"], "DEN", [79, 1], [36.1, 0.581, 0.812, 1.1, 26.8, 12.6, 9.4, 1.4, 0.8, 3.1]),
   player("Marcus Vale", ["PG"], "OKC", [76, 2], [34.5, 0.512, 0.901, 2.0, 31.2, 5.4, 6.3, 2.0, 0.9, 2.4]),
   player("Andris Kalnins", ["PF", "C"], "SAS", [70, 4], [33.0, 0.478, 0.832, 3.2, 24.9, 11.0, 3.8, 1.1, 3.6, 3.2]),

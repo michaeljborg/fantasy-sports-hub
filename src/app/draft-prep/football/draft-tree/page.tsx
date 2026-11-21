@@ -4,7 +4,7 @@ import { PageTransition } from "@/components/page-transition";
 
 export const metadata: Metadata = { title: "Draft Tree" };
 
-export default function DraftTreePage() {
+export default function FootballDraftTreePage() {
   return (
     <PageTransition>
       <DraftTrees />

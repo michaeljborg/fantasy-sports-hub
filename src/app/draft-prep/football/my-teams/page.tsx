@@ -4,7 +4,7 @@ import { PageTransition } from "@/components/page-transition";
 
 export const metadata: Metadata = { title: "My Teams" };
 
-export default function SavedTeamsPage() {
+export default function FootballMyTeamsPage() {
   return (
     <PageTransition>
       <SavedTeams />

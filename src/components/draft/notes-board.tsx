@@ -6,7 +6,7 @@ import { ConfirmButton } from "@/components/ui/dialog";
 import type { Note, NoteColor } from "@/lib/draft/types";
 import { cn } from "@/lib/navigation";
 import { buttonStyles } from "./controls";
-import { NOTE_COLORS, useDraft } from "./draft-state";
+import { NOTE_COLORS, useSportState } from "./draft-state";
 
 const noteHue: Record<NoteColor, string | undefined> = {
   yellow: "--hue-amber",
@@ -25,21 +25,21 @@ const MIN_H = 140;
 
 /** Freeform sticky notes. Drag the grip to move, the corner to resize. */
 export function NotesBoard() {
-  const { football } = useDraft();
+  const d = useSportState();
   return (
     <section className="overflow-hidden rounded-card border border-border bg-surface shadow-card">
       <header className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
         <p className="text-sm text-fg-muted">
-          {football.notes.length ? "Drag a note by its handle to move it." : "Add a note for draft day reminders, sleepers or league rules."}
+          {d.notes.length ? "Drag a note by its handle to move it." : "Add a note for draft day reminders, sleepers or league rules."}
         </p>
-        <button type="button" onClick={football.addNote} className={buttonStyles.primary}>
+        <button type="button" onClick={d.addNote} className={buttonStyles.primary}>
           <PlusIcon className="size-4" />
           Add note
         </button>
       </header>
       <div className="h-[70dvh] min-h-[28rem] overflow-auto border-t border-border">
         <div className="canvas-grid relative h-[1400px] w-[1600px]">
-          {football.notes.map((note) => (
+          {d.notes.map((note) => (
             <NoteCard key={note.id} note={note} />
           ))}
         </div>
@@ -67,7 +67,7 @@ function useDrag(onDrag: (dx: number, dy: number) => void) {
 }
 
 function NoteCard({ note }: { note: Note }) {
-  const { football } = useDraft();
+  const d = useSportState();
   const [colorsOpen, setColorsOpen] = useState(false);
   const origin = useRef(note);
 
@@ -76,10 +76,10 @@ function NoteCard({ note }: { note: Note }) {
     handler(e);
   };
   const move = useDrag((dx, dy) =>
-    football.updateNote(note.id, { x: Math.max(0, origin.current.x + dx), y: Math.max(0, origin.current.y + dy) }),
+    d.updateNote(note.id, { x: Math.max(0, origin.current.x + dx), y: Math.max(0, origin.current.y + dy) }),
   );
   const resize = useDrag((dx, dy) =>
-    football.updateNote(note.id, {
+    d.updateNote(note.id, {
       width: Math.max(MIN_W, origin.current.width + dx),
       height: Math.max(MIN_H, origin.current.height + dy),
     }),
@@ -121,7 +121,7 @@ function NoteCard({ note }: { note: Note }) {
                   type="button"
                   aria-label={c}
                   onClick={() => {
-                    football.updateNote(note.id, { color: c });
+                    d.updateNote(note.id, { color: c });
                     setColorsOpen(false);
                   }}
                   style={hueStyle(c)}
@@ -138,7 +138,7 @@ function NoteCard({ note }: { note: Note }) {
         <input
           value={note.title}
           aria-label="Note title"
-          onChange={(e) => football.updateNote(note.id, { title: e.target.value })}
+          onChange={(e) => d.updateNote(note.id, { title: e.target.value })}
           placeholder="Untitled"
           className="min-w-0 flex-1 bg-transparent px-1 text-sm font-semibold outline-none placeholder:font-normal placeholder:text-fg-subtle"
         />
@@ -146,7 +146,7 @@ function NoteCard({ note }: { note: Note }) {
           title="Delete this note?"
           message="This can't be undone."
           confirmLabel="Delete note"
-          onConfirm={() => football.deleteNote(note.id)}
+          onConfirm={() => d.deleteNote(note.id)}
           aria-label="Delete note"
           className={buttonStyles.icon + " hover:text-danger"}
         >
@@ -156,7 +156,7 @@ function NoteCard({ note }: { note: Note }) {
       <textarea
         value={note.text}
         aria-label="Note text"
-        onChange={(e) => football.updateNote(note.id, { text: e.target.value })}
+        onChange={(e) => d.updateNote(note.id, { text: e.target.value })}
         placeholder="Type a note"
         className="relative flex-1 resize-none bg-transparent px-3 pt-1 pb-3 text-sm outline-none placeholder:text-fg-subtle"
       />

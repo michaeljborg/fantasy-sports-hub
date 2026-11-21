@@ -36,7 +36,7 @@ export function DraftHeader({ app, sport }: { app: FantasyApp; sport: DraftSport
               {titles[sport]}
             </h1>
             <p className="mt-2 text-sm text-fg-muted">
-              <DraftSummary sport={sport} />
+              <DraftSummary />
             </p>
           </div>
         </div>

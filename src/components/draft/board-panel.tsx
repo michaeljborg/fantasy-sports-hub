@@ -10,6 +10,7 @@ export function BoardPanel({
   toolbar,
   className,
   bodyClassName,
+  flush,
   children,
 }: {
   title: string;
@@ -17,6 +18,8 @@ export function BoardPanel({
   toolbar?: React.ReactNode;
   className?: string;
   bodyClassName?: string;
+  /** The body handles its own toolbar and scrolling (e.g. PlayerTable). */
+  flush?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -31,9 +34,13 @@ export function BoardPanel({
         {actions && <div className="flex items-center gap-1.5">{actions}</div>}
       </header>
       {toolbar && <div className="flex flex-wrap items-center gap-2 px-5 pt-4 sm:px-6">{toolbar}</div>}
-      <div className={cn("mt-4 max-h-[70dvh] min-h-0 flex-1 overflow-auto border-t border-border lg:max-h-none", bodyClassName)}>
-        {children}
-      </div>
+      {flush ? (
+        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+      ) : (
+        <div className={cn("mt-4 max-h-[70dvh] min-h-0 flex-1 overflow-auto border-t border-border lg:max-h-none", bodyClassName)}>
+          {children}
+        </div>
+      )}
     </section>
   );
 }

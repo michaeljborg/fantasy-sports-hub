@@ -1,35 +1,29 @@
 /**
- * Draft prep data shapes. Football, hockey and basketball. The mock data in
- * mock-*.ts fills these until a real source exists.
+ * Draft prep data shapes, shared by every sport. Sport differences (positions,
+ * roster, stat columns, tiers) live in sports.ts. The mock-*.ts files fill
+ * these until a real source exists.
  */
 
 export type DraftSportId = "football" | "hockey" | "basketball";
 
-/** Sports drafted on the single board (My Team + Draft Board). */
-export type BoardSportId = "hockey" | "basketball";
-
-/* ---------- Football ---------- */
-
-export type Position = "QB" | "RB" | "WR" | "TE" | "K" | "DST";
-
 export type Player = {
   id: string;
   name: string;
-  position: Position;
+  /** Eligible positions, e.g. ["RB"] or ["C", "RW"] */
+  positions: string[];
   team: string;
-  /** Consensus rank, lower is better. Can be edited on the board. */
+  /** Overall rank, lower is better. Can be edited on the board. */
   rank: number;
-  bye?: number;
-  /** Average draft position */
-  adp?: number;
-  /** Overall (cross-position) tier, lower is better */
+  /** Overall tier, lower is better (football only for now) */
   tier?: number;
-  /** Tier within the player's own position, lower is better */
+  /** Tier within the player's first position (football only for now) */
   positionTier?: number;
+  /** Sport-specific columns, keyed by the column keys in sports.ts */
+  stats: Record<string, number | string>;
 };
 
 /** Just enough of a player to show it; snapshotted onto saved teams and trees. */
-export type PlayerRef = Pick<Player, "id" | "name" | "position" | "team">;
+export type PlayerRef = Pick<Player, "id" | "name" | "positions" | "team">;
 
 export type DraftConfig = { teams: number; slot: number; rounds: number };
 
@@ -73,72 +67,4 @@ export type Note = {
   y: number;
   width: number;
   height: number;
-};
-
-/* ---------- Single board (hockey, basketball) ---------- */
-
-/** What the board needs from any player, whatever the sport. */
-export type BoardPlayer = {
-  id: string;
-  name: string;
-  /** Eligible positions, e.g. ["C", "RW"] */
-  positions: string[];
-  team: string;
-  gamesPlayed: number;
-  rankPreSeason: number;
-  /** Rank at the end of last season */
-  rankCurrent: number;
-};
-
-/* ---------- Hockey ---------- */
-
-export type HockeyPosition = "C" | "LW" | "RW" | "D" | "G";
-
-type HockeyPlayerBase = BoardPlayer & {
-  positions: HockeyPosition[];
-  fantasyPoints: number;
-};
-
-export type HockeySkater = HockeyPlayerBase & {
-  kind: "skater";
-  /** Time on ice per game, e.g. "22:59" */
-  toiPerGame: string;
-  goals: number;
-  assists: number;
-  plusMinus: number;
-  powerPlayPoints: number;
-  shotsOnGoal: number;
-  hits: number;
-  blocks: number;
-};
-
-export type HockeyGoalie = HockeyPlayerBase & {
-  kind: "goalie";
-  /** Season total time on ice, e.g. "3,401:27" */
-  timeOnIce: string;
-  wins: number;
-  goalsAgainst: number;
-  saves: number;
-  shutouts: number;
-};
-
-export type HockeyPlayer = HockeySkater | HockeyGoalie;
-
-/* ---------- Basketball ---------- */
-
-export type BasketballPosition = "PG" | "SG" | "SF" | "PF" | "C";
-
-/** Season per-game averages for standard 9-cat. */
-export type BasketballPlayer = BoardPlayer & {
-  positions: BasketballPosition[];
-  minutes: number;
-  fgp: number;
-  ftp: number;
-  tpm: number;
-  pts: number;
-  reb: number;
-  ast: number;
-  stl: number;
-  blk: number;
-  to: number;
 };
