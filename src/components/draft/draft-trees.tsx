@@ -67,7 +67,7 @@ function TreeList({ onOpen }: { onOpen: (id: string) => void }) {
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-fg-muted">From scratch ({configLine(f.config)})</span>
+            <span className="text-xs text-fg-muted">From scratch</span>
             <button type="button" onClick={() => setPicking(true)} className={cn(buttonStyles.primary, "self-start")}>
               <PlusIcon className="size-4" />
               Choose a Round 1 pick

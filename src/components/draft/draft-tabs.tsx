@@ -26,12 +26,3 @@ export function DraftTabs() {
   );
 }
 
-/** One line under the title: the live draft settings. */
-export function DraftSummary() {
-  const { teams, slot, rounds } = useSportState().config;
-  return (
-    <>
-      {teams} teams, pick {slot}, {rounds} rounds
-    </>
-  );
-}

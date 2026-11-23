@@ -6,7 +6,6 @@ import { sportHref } from "@/lib/draft/sections";
 import { draftSports } from "@/lib/draft/sports";
 import type { DraftSportId } from "@/lib/draft/types";
 import { cn, NAV_BACK } from "@/lib/navigation";
-import { DraftSummary } from "./draft-tabs";
 
 const titles: Record<DraftSportId, string> = {
   football: "Football draft",
@@ -35,9 +34,6 @@ export function DraftHeader({ app, sport }: { app: FantasyApp; sport: DraftSport
             <h1 className="mt-0.5 truncate font-display text-4xl leading-none font-extrabold tracking-tight uppercase sm:text-5xl">
               {titles[sport]}
             </h1>
-            <p className="mt-2 text-sm text-fg-muted">
-              <DraftSummary />
-            </p>
           </div>
         </div>
 
