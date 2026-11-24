@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, Geist, Geist_Mono } from "next/font/google";
 import { BackgroundDecor } from "@/components/background-decor";
 import { SiteHeader } from "@/components/site-header";
-import { ThemeLab, themeLabScript } from "@/components/theme-lab";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -41,14 +40,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${barlowCondensed.variable} h-full antialiased`}
-      suppressHydrationWarning
     >
-      <head>
-        {/* TEMP: Theme Lab, applies saved palette before paint */}
-        <script dangerouslySetInnerHTML={{ __html: themeLabScript }} />
-      </head>
       <body className="flex min-h-full flex-col">
-        <ThemeLab />
         <BackgroundDecor />
         <SiteHeader />
         {children}

@@ -16,12 +16,14 @@
 :root {
   color-scheme: light dark;
 
-  /*
-   * Palette inputs (--hue, --tint, --brand, --brand-fg, --accent-primary,
-   * --accent-secondary) are defined in src/styles/palettes.css.
-   * Neutrals below are tinted toward the palette's --hue; --tint scales how
-   * colorful the grays are (0 = pure gray).
-   */
+  /* Palette: black on white. Neutrals are tinted toward --hue; --tint scales
+     how colorful the grays are (0 = pure gray). */
+  --hue: 260;
+  --tint: 0;
+  --brand: light-dark(oklch(0.18 0 0), oklch(0.96 0 0));
+  --brand-fg: light-dark(oklch(1 0 0), oklch(0.16 0 0));
+  --accent-primary: var(--brand);
+  --accent-secondary: var(--brand);
 
   /* Surfaces */
   --bg: light-dark(
