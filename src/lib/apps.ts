@@ -16,7 +16,7 @@ export type FantasyApp = {
   tagline: string;
   description: string;
   tags: string[];
-  /** CSS color token for this app's accent (see src/styles/palettes.css) */
+  /** CSS color token for this app's accent (see src/styles/theme.css) */
   accent: string;
 };
 

@@ -15,6 +15,10 @@ export const metadata: Metadata = {
   title: { default: app.name, template: `%s · ${app.shortName}` },
 };
 
+// The header and team switcher depend on the team in the URL, so entering this
+// layout from outside may block. Tab-to-tab navigations stay instant (see loading.tsx).
+export const instant = false;
+
 export function generateStaticParams() {
   return userTeams.map((t) => ({ team: t.id }));
 }
