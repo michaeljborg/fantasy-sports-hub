@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { AppCard } from "@/components/app-card";
+import { YahooAccount, YahooAccountSkeleton } from "@/components/yahoo-account";
 import { PageTransition } from "@/components/page-transition";
 import { apps } from "@/lib/apps";
 
@@ -23,6 +25,11 @@ export default function Home() {
             Matchups, drafts, trades and league history for your fantasy
             leagues, all in one place.
           </p>
+          <div className="mt-8 [animation-delay:200ms] motion-safe:animate-rise">
+            <Suspense fallback={<YahooAccountSkeleton />}>
+              <YahooAccount />
+            </Suspense>
+          </div>
         </section>
 
         <section aria-labelledby="apps-heading" className="mt-16 sm:mt-24">
