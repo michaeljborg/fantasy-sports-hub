@@ -8,11 +8,11 @@ import { DataAge } from "@/components/my-teams/data-age";
 import { PageTransition } from "@/components/page-transition";
 import { teamFromParams } from "@/lib/my-teams/load";
 import {
+  currentWeekOf,
   getLeague,
   getSeasonStats,
   getTeamDetails,
   getThisWeek,
-  isHeadToHead,
   isPointsLeague,
 } from "@/lib/yahoo/team";
 
@@ -20,13 +20,12 @@ export const metadata: Metadata = { title: "Overview" };
 
 async function loadOverview(teamKey: string, leagueKey: string) {
   const league = await getLeague(leagueKey);
-  const inSeason =
-    isHeadToHead(league) && league.draftStatus === "postdraft" && !league.isFinished && !!league.currentWeek;
+  const week = currentWeekOf(league);
   const [details, season, thisWeek] = await Promise.all([
     getTeamDetails(teamKey, league.sport),
     // Optional extras: the page still renders if either is rejected.
     getSeasonStats(league, teamKey).catch(() => null),
-    inSeason ? getThisWeek(teamKey, league.currentWeek!, league.sport).catch(() => null) : null,
+    week ? getThisWeek(teamKey, week, league.sport).catch(() => null) : null,
   ]);
   return { league, details, season, thisWeek };
 }

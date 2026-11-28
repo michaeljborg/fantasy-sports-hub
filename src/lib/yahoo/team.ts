@@ -81,6 +81,12 @@ export const isPointsLeague = (league: LeagueInfo) =>
 export const isHeadToHead = (league: LeagueInfo) =>
   league.scoringType === "head" || league.scoringType === "headpoint";
 
+/** The current week when there's a head-to-head opponent to show (in season, after the draft). */
+export const currentWeekOf = (league: LeagueInfo) =>
+  isHeadToHead(league) && league.draftStatus === "postdraft" && !league.isFinished
+    ? league.currentWeek
+    : undefined;
+
 function logoOf(team: Obj) {
   return str(fields(list(team.team_logos, "team_logo")[0]).url);
 }

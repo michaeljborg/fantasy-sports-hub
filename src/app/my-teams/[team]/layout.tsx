@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { TeamChrome, TeamChromeSkeleton } from "@/components/my-teams/team-chrome";
+import { WarmTeam } from "@/components/my-teams/warm-team";
 import { PageTransition } from "@/components/page-transition";
 import { YAHOO_ATTRIBUTION } from "@/components/yahoo-ui";
 import { accentStyle, getApp } from "@/lib/apps";
@@ -25,6 +26,10 @@ export default function MyTeamLayout({ children, params }: LayoutProps<"/my-team
       >
         <Suspense fallback={<TeamChromeSkeleton />}>
           <TeamChrome params={params} />
+        </Suspense>
+        {/* Loads all four tabs' data on entering a team; renders nothing. */}
+        <Suspense fallback={null}>
+          <WarmTeam params={params} />
         </Suspense>
         <div className="mt-6 sm:mt-8">{children}</div>
         <p className="mt-10 text-xs text-fg-subtle">{YAHOO_ATTRIBUTION}</p>
