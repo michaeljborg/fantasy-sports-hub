@@ -1,3 +1,4 @@
+import { BasketballIcon, FootballIcon, HockeyIcon } from "@/components/icons";
 import { getMyTeams, type YahooTeam } from "@/lib/yahoo/api";
 import { YahooAuthError } from "@/lib/yahoo/client";
 import { getSession } from "@/lib/yahoo/session";
@@ -7,6 +8,17 @@ const SPORT_LABEL: Record<YahooTeam["sport"], string> = {
   football: "Football",
   hockey: "Hockey",
 };
+
+const SPORT_ICON = {
+  basketball: BasketballIcon,
+  football: FootballIcon,
+  hockey: HockeyIcon,
+} satisfies Record<YahooTeam["sport"], unknown>;
+
+function SportIcon({ sport, className }: { sport: YahooTeam["sport"]; className?: string }) {
+  const Icon = SPORT_ICON[sport];
+  return <Icon className={className} />;
+}
 
 function SignInButton({ label = "Sign in with Yahoo" }: { label?: string }) {
   return (
@@ -72,39 +84,128 @@ export async function YahooAccount() {
 
   const name = session.name ?? teams.find((t) => t.managerName)?.managerName;
 
+  // Group by sport, keeping the order Yahoo returned them in.
+  const bySport = new Map<YahooTeam["sport"], YahooTeam[]>();
+  for (const team of teams) bySport.set(team.sport, [...(bySport.get(team.sport) ?? []), team]);
+
   return (
-    <div className="space-y-4">
+    <div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h2 className="text-sm font-semibold text-fg-muted">Your teams</h2>
+        <div className="hidden h-px flex-1 bg-fg/30 sm:block" />
         <p className="inline-flex items-center gap-2 text-sm text-fg-muted">
           <span className="size-2 rounded-full bg-success" />
-          Signed in with Yahoo{name ? ` as ${name}` : ""}
+          Signed in{name ? ` as ${name}` : " with Yahoo"}
         </p>
         <SignOutButton />
       </div>
 
       {teams.length === 0 ? (
-        <p className="text-sm text-fg-muted">
-          No current basketball, football or hockey teams found on this Yahoo account.
+        <p className="mt-6 text-fg-muted">
+          No basketball, football or hockey teams this season on your Yahoo account. Join a
+          league on Yahoo and it will show up here.
         </p>
       ) : (
-        <ul className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-          {teams.map((team) => (
-            <li
-              key={team.teamKey}
-              title={`${team.teamName} · ${team.leagueName}`}
-              className="min-w-0 rounded-xl border border-border bg-surface/60 px-3 py-2 backdrop-blur"
+        <div className="mt-5 space-y-4">
+          {[...bySport].map(([sport, sportTeams]) => (
+            <section
+              key={sport}
+              aria-label={SPORT_LABEL[sport]}
+              className="grid grid-cols-[2rem_1fr] items-start gap-3 sm:gap-4"
             >
-              <p className="truncate text-sm font-semibold">{team.teamName}</p>
-              <p className="truncate text-xs text-fg-subtle">
-                {SPORT_LABEL[team.sport]} · {team.leagueName} · {team.season}
-              </p>
-            </li>
+              {/* h-16 = one card's height, so the icon lines up with the first row */}
+              <h3 className="flex h-16 items-center justify-center text-fg" title={SPORT_LABEL[sport]}>
+                <SportIcon sport={sport} className="size-7" />
+                <span className="sr-only">{SPORT_LABEL[sport]}</span>
+              </h3>
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {sportTeams.map((team) => (
+                  <li key={team.teamKey}>
+                    <TeamCard team={team} />
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
 
-      <p className="text-xs text-fg-subtle">Fantasy data provided by Yahoo Fantasy</p>
+      <p className="mt-6 text-xs text-fg-subtle">Fantasy data provided by Yahoo Fantasy</p>
     </div>
+  );
+}
+
+function ordinal(n: number) {
+  const suffixes = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`;
+}
+
+function TeamLogo({ team }: { team: YahooTeam }) {
+  if (team.logoUrl) {
+    return (
+      // Yahoo serves logos from several CDNs; a plain <img> avoids an image-domain allowlist.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={team.logoUrl}
+        alt=""
+        width={40}
+        height={40}
+        loading="lazy"
+        className="size-10 shrink-0 rounded-lg bg-surface-muted object-cover"
+      />
+    );
+  }
+  return (
+    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-surface-muted font-display text-base font-bold uppercase">
+      {team.teamName.slice(0, 2)}
+    </span>
+  );
+}
+
+function TeamCard({ team }: { team: YahooTeam }) {
+  const record = team.record
+    ? `${team.record.w}–${team.record.l}${team.record.t ? `–${team.record.t}` : ""}`
+    : undefined;
+
+  const body = (
+    <>
+      <TeamLogo team={team} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-semibold">{team.teamName}</p>
+        <p className="truncate text-sm text-fg-muted">{team.leagueName}</p>
+      </div>
+      <div className="shrink-0 text-right">
+        {team.rank ? (
+          <>
+            <p className="font-display text-xl leading-none font-bold">{ordinal(team.rank)}</p>
+            <p className="mt-1 text-xs text-fg-subtle tabular-nums">
+              {record ?? (team.leagueSize ? `of ${team.leagueSize}` : "")}
+            </p>
+          </>
+        ) : (
+          <p className="text-xs text-fg-subtle">
+            {team.leagueSize ? `${team.leagueSize} teams` : team.season}
+          </p>
+        )}
+      </div>
+    </>
+  );
+
+  const className =
+    "flex h-16 items-center gap-3 rounded-xl border border-border bg-surface/70 px-3 shadow-card";
+
+  if (!team.teamUrl) return <div className={className}>{body}</div>;
+  return (
+    <a
+      href={team.teamUrl}
+      target="_blank"
+      rel="noreferrer"
+      title={`Open ${team.teamName} on Yahoo`}
+      className={`${className} transition-[translate,border-color] duration-200 ease-out hover:border-border-strong motion-safe:hover:-translate-y-0.5`}
+    >
+      {body}
+    </a>
   );
 }
 

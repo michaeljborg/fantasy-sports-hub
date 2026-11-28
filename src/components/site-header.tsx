@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { HeaderNav } from "@/components/header-nav";
+import { LogoMark } from "@/components/logo";
 import { NAV_BACK } from "@/lib/navigation";
 
 export function SiteHeader() {
@@ -12,15 +13,11 @@ export function SiteHeader() {
         <Link
           href="/"
           transitionTypes={NAV_BACK}
-          className="flex items-center gap-3 rounded-lg transition-transform duration-150 active:scale-95"
+          className="flex items-center gap-2.5 rounded-lg transition-transform duration-150 active:scale-95"
         >
-          <span className="grid h-8 -skew-x-12 place-items-center rounded-md bg-brand px-2 shadow-[0_6px_20px_-6px_var(--brand)]">
-            <span className="skew-x-12 font-display text-lg leading-none font-extrabold tracking-tight text-brand-fg">
-              FSH
-            </span>
-          </span>
-          <span className="hidden font-display text-lg font-bold tracking-wide uppercase sm:block">
-            Fantasy Sports Hub
+          <LogoMark className="size-8 shrink-0" />
+          <span className="font-display text-lg font-extrabold tracking-wide whitespace-nowrap uppercase">
+            Fantasy <span className="text-gradient-brand">Sports Hub</span>
           </span>
         </Link>
         <HeaderNav />

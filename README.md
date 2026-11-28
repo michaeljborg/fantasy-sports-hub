@@ -8,7 +8,7 @@ Built with Next.js 16, React 19 and Tailwind CSS 4.
 
 | App | Status |
 |---|---|
-| Weekly Matchup Dashboard | Built, on mock data |
+| Weekly Matchup | Built, on mock data |
 | Draft Prep | Built, on mock data |
 | Hall of Fame | Placeholder |
 | Trades & Injury Alerts | Placeholder |
@@ -89,7 +89,8 @@ Base URL: `https://fantasysports.yahooapis.com/fantasy/v2`
 | Endpoint | Returns | Called from |
 |---|---|---|
 | `/users;use_login=1/games;game_keys=nba,nfl,nhl/teams` | The signed-in user's current-season teams | `api.ts` → `getMyTeams()` |
-| `/users;use_login=1/games;game_keys=nba,nfl,nhl/leagues` | League names for those teams | `api.ts` → `getMyTeams()` |
+| `/users;use_login=1/games;game_keys=nba,nfl,nhl/leagues` | League names and sizes for those teams | `api.ts` → `getMyTeams()` |
+| `/teams;team_keys=…/standings` | Rank and W-L-T for each team (optional; teams still show if it fails) | `api.ts` → `getStandings()` |
 
 Requests go through `yahooGet()` in `client.ts`, which adds the access token and `format=json`. `parse.ts` flattens Yahoo's nested JSON.
 
