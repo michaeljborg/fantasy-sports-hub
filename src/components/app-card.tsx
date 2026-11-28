@@ -11,13 +11,8 @@ export function AppCard({ app, number }: { app: FantasyApp; number: number }) {
       href={app.href}
       transitionTypes={NAV_FORWARD}
       style={accentStyle(app)}
-      className="group relative flex h-full flex-col overflow-hidden rounded-card border border-border bg-surface/70 p-6 shadow-card backdrop-blur-sm transition-[translate,scale,border-color,box-shadow] duration-300 ease-spring hover:-translate-y-1 hover:border-(--accent)/40 hover:shadow-[0_24px_60px_-28px_var(--accent)] active:translate-y-0 active:scale-[0.985] active:duration-100 sm:p-8"
+      className="group relative flex h-full flex-col overflow-hidden rounded-card border border-fg/30 bg-surface/70 p-6 shadow-card backdrop-blur-sm transition-[translate,scale,border-color] duration-300 ease-spring hover:-translate-y-1 hover:border-(--accent)/40 active:translate-y-0 active:scale-[0.985] active:duration-100 sm:p-8"
     >
-      {/* Accent glow */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-40 -right-40 size-96 bg-[radial-gradient(closest-side,var(--accent),transparent)] opacity-10 transition-opacity duration-500 group-hover:opacity-20"
-      />
       {/* Jersey number */}
       <span
         aria-hidden="true"
@@ -26,23 +21,26 @@ export function AppCard({ app, number }: { app: FantasyApp; number: number }) {
         {String(number).padStart(2, "0")}
       </span>
 
-      <div className="relative flex items-start justify-between">
-        <AppIconTile app={app} />
-        <span className="grid size-10 place-items-center rounded-full border border-border text-fg-muted transition-[background-color,border-color,color,rotate] duration-300 ease-spring group-hover:rotate-45 group-hover:border-transparent group-hover:bg-(--accent) group-hover:text-bg">
-          <ArrowUpRightIcon className="size-4" />
-        </span>
+      <div className="relative flex items-start justify-between gap-4">
+        <AppIconTile app={app} plain />
+        {app.status === "ready" ? (
+          <span className="grid size-10 place-items-center rounded-full border border-border text-fg-muted transition-[background-color,border-color,color,rotate] duration-300 ease-spring group-hover:rotate-45 group-hover:border-transparent group-hover:bg-(--accent) group-hover:text-bg">
+            <ArrowUpRightIcon className="size-4" />
+          </span>
+        ) : (
+          <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-fg-muted">
+            Coming soon
+          </span>
+        )}
       </div>
 
-      <p className="relative mt-8 text-xs font-semibold tracking-[0.18em] text-(--accent) uppercase">
-        {app.tagline}
-      </p>
-      <h3 className="relative mt-2 font-display text-3xl leading-none font-bold tracking-tight uppercase sm:text-4xl">
+      <p className="relative mt-8 text-sm font-semibold text-(--accent)">{app.tagline}</p>
+      <h3 className="relative mt-1.5 font-display text-3xl leading-none font-bold tracking-tight uppercase sm:text-4xl">
         {app.name}
       </h3>
-      <p className="relative mt-3 max-w-md flex-1 text-fg-muted">
-        {app.description}
-      </p>
-      <ul className="relative mt-6 flex flex-wrap gap-2">
+      <p className="relative mt-3 max-w-md flex-1 text-fg-muted">{app.description}</p>
+      {/* One row only: extra tags are clipped instead of wrapping. */}
+      <ul className="relative mt-6 flex gap-2 overflow-hidden whitespace-nowrap">
         {app.tags.map((tag) => (
           <li key={tag}>
             <Chip>{tag}</Chip>

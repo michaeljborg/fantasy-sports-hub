@@ -18,17 +18,22 @@ export function AppIconTile({
   app,
   size = "md",
   morph = true,
+  plain = false,
 }: {
   app: FantasyApp;
   size?: keyof typeof sizes;
   morph?: boolean;
+  /** Just the accent-colored icon, without the tinted tile behind it. */
+  plain?: boolean;
 }) {
   const Icon = appIcons[app.id];
   const tile = (
     <div
       className={cn(
-        "grid shrink-0 place-items-center bg-(--accent)/15 text-(--accent) ring-1 ring-(--accent)/30 ring-inset",
-        sizes[size],
+        "grid shrink-0 place-items-center text-(--accent)",
+        plain
+          ? "[&_svg]:size-8"
+          : cn("bg-(--accent)/15 ring-1 ring-(--accent)/30 ring-inset", sizes[size]),
       )}
     >
       <Icon />

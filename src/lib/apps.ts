@@ -18,6 +18,8 @@ export type FantasyApp = {
   tags: string[];
   /** CSS color token for this app's accent (see src/styles/theme.css) */
   accent: string;
+  /** "soon" apps are placeholder pages; the hub shows them as coming soon. */
+  status: "ready" | "soon";
 };
 
 const PRIMARY = "var(--accent-primary)";
@@ -27,18 +29,19 @@ const SECONDARY = "var(--accent-secondary)";
 export const apps: FantasyApp[] = [
   {
     id: "weekly-matchup",
-    name: "Fantasy Weekly Matchup Dashboard",
+    name: "Weekly Matchup",
     shortName: "Matchup",
     href: "/weekly-matchup",
     tagline: "H2H 9-Cat Basketball",
     description:
-      "Break down this week's head-to-head matchup: which categories you're winning, which are close, and which a streamer could flip.",
-    tags: ["H2H 9-Cat", "Category outlook", "Streaming targets"],
+      "See which categories you're winning, which are close, and which a streamer could flip.",
+    tags: ["Categories", "Sit / start", "Streamers"],
     accent: PRIMARY,
+    status: "ready",
   },
   {
     id: "draft-prep",
-    name: "Fantasy Draft Prep",
+    name: "Draft Prep",
     shortName: "Draft Prep",
     href: "/draft-prep",
     tagline: "Football, hockey & basketball",
@@ -46,10 +49,11 @@ export const apps: FantasyApp[] = [
       "Run a mock draft against your rankings, track tiers and your watchlist, and plan pick-by-pick scenarios.",
     tags: ["Rankings", "Tiers", "Draft scenarios"],
     accent: SECONDARY,
+    status: "ready",
   },
   {
     id: "hall-of-fame",
-    name: "Fantasy Hall of Fame",
+    name: "Hall of Fame",
     shortName: "Hall of Fame",
     href: "/hall-of-fame",
     tagline: "League history",
@@ -57,6 +61,7 @@ export const apps: FantasyApp[] = [
       "Your league's champions, records and all-time bests in one place.",
     tags: ["Champions", "Records"],
     accent: PRIMARY,
+    status: "soon",
   },
   {
     id: "alerts",
@@ -68,6 +73,7 @@ export const apps: FantasyApp[] = [
       "Get notified about trades and injuries that affect your roster.",
     tags: ["Trades", "Injuries"],
     accent: SECONDARY,
+    status: "soon",
   },
   {
     id: "playoff-odds",
@@ -79,6 +85,7 @@ export const apps: FantasyApp[] = [
       "See your chances of making the playoffs based on standings and the schedule ahead.",
     tags: ["Standings", "Odds"],
     accent: PRIMARY,
+    status: "soon",
   },
   {
     id: "trade-analyzer",
@@ -90,6 +97,7 @@ export const apps: FantasyApp[] = [
       "Compare both sides of a trade and see how it changes your team.",
     tags: ["Trade value", "Team impact"],
     accent: SECONDARY,
+    status: "soon",
   },
 ];
 

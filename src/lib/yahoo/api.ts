@@ -26,7 +26,45 @@ export type YahooTeam = {
   season: string;
   /** The signed-in user's manager nickname on this team */
   managerName?: string;
+  logoUrl?: string;
+  leagueSize?: number;
+  /** Current league rank; missing before the season starts */
+  rank?: number;
+  record?: { w: number; l: number; t: number };
 };
+
+const num = (value: unknown) => {
+  const n = Number(str(value));
+  return Number.isFinite(n) && str(value) !== "" ? n : undefined;
+};
+
+type Standing = Pick<YahooTeam, "rank" | "record">;
+
+/**
+ * Rank and W-L-T for each team. Best effort: if Yahoo rejects the request,
+ * the teams are still shown, just without standings.
+ */
+async function getStandings(teamKeys: string[]): Promise<Map<string, Standing>> {
+  const standings = new Map<string, Standing>();
+  if (teamKeys.length === 0) return standings;
+  try {
+    const content = await yahooGet(`/teams;team_keys=${teamKeys.join(",")}/standings`);
+    for (const team of list(content.teams, "team").map(fields)) {
+      const key = str(team.team_key);
+      const s = fields(team.team_standings);
+      const totals = fields(s.outcome_totals);
+      const w = num(totals.wins);
+      if (!key) continue;
+      standings.set(key, {
+        rank: num(s.rank),
+        record: w === undefined ? undefined : { w, l: num(totals.losses) ?? 0, t: num(totals.ties) ?? 0 },
+      });
+    }
+  } catch {
+    // Standings are optional.
+  }
+  return standings;
+}
 
 const leagueKeyOf = (teamKey: string) => teamKey.replace(/\.t\.\d+$/, "");
 
@@ -47,11 +85,11 @@ export async function getMyTeams(): Promise<YahooTeam[]> {
     yahooGet(`/users;use_login=1/games;game_keys=${gameKeys}/leagues`),
   ]);
 
-  const leagueNames = new Map<string, string>();
+  const leagues = new Map<string, { name: string; size?: number }>();
   for (const game of userGames(leaguesContent)) {
     for (const league of list(game.leagues, "league").map(fields)) {
       const key = str(league.league_key);
-      if (key) leagueNames.set(key, str(league.name) ?? key);
+      if (key) leagues.set(key, { name: str(league.name) ?? key, size: num(league.num_teams) });
     }
   }
 
@@ -66,17 +104,22 @@ export async function getMyTeams(): Promise<YahooTeam[]> {
         .map(fields)
         .find((m) => str(m.is_current_login) === "1");
       const leagueKey = leagueKeyOf(teamKey);
+      const logo = list(team.team_logos, "team_logo").map(fields)[0];
       teams.push({
         teamKey,
         teamName: str(team.name) ?? teamKey,
         teamUrl: str(team.url),
         leagueKey,
-        leagueName: leagueNames.get(leagueKey) ?? leagueKey,
+        leagueName: leagues.get(leagueKey)?.name ?? leagueKey,
+        leagueSize: leagues.get(leagueKey)?.size,
         sport,
         season: str(game.season) ?? "",
         managerName: str(me?.nickname),
+        logoUrl: str(logo?.url),
       });
     }
   }
-  return teams;
+
+  const standings = await getStandings(teams.map((t) => t.teamKey));
+  return teams.map((team) => ({ ...team, ...standings.get(team.teamKey) }));
 }
