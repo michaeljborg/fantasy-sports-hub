@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 
 export type AppId =
+  | "my-teams"
   | "weekly-matchup"
   | "draft-prep"
   | "hall-of-fame"
@@ -27,6 +28,18 @@ const SECONDARY = "var(--accent-secondary)";
 
 /** Order here is the order on the hub and in the Apps menu. */
 export const apps: FantasyApp[] = [
+  {
+    id: "my-teams",
+    name: "My Teams",
+    shortName: "My Teams",
+    href: "/my-teams",
+    tagline: "Your Yahoo teams",
+    description:
+      "Switch between your Yahoo teams and see each one's standing, roster, draft picks and moves.",
+    tags: ["Standings", "Roster", "Draft"],
+    accent: PRIMARY,
+    status: "ready",
+  },
   {
     id: "weekly-matchup",
     name: "Weekly Matchup",

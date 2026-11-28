@@ -8,15 +8,19 @@ const MENU_WIDTH = 320; // matches w-[min(20rem,...)]
 const EDGE = 16;
 const GAP = 8;
 import { CheckIcon, ChevronDownIcon } from "@/components/icons";
-import { teamHref } from "@/lib/fantasy/sections";
+import { teamHref as matchupTeamHref } from "@/lib/fantasy/sections";
 import { cn } from "@/lib/navigation";
 
 export type TeamOption = { id: string; name: string; league: string };
 
-/** Switches between the user's teams in this sport, staying on the same tab. */
-export function TeamSwitcher(props: { current: string; teams: TeamOption[] }) {
+/** Weekly Matchup by default; pass another app's base path (e.g. "/my-teams") to reuse. */
+const hrefFor = (base: string | undefined, id: string) =>
+  base ? `${base}/${id}` : matchupTeamHref(id);
+
+/** Switches between the user's teams, staying on the same tab. */
+export function TeamSwitcher(props: { current: string; teams: TeamOption[]; base?: string }) {
   const pathname = usePathname();
-  const tab = pathname.slice(teamHref(props.current).length);
+  const tab = pathname.slice(hrefFor(props.base, props.current).length);
   return <TeamSwitcherMenu {...props} tab={tab} />;
 }
 
@@ -25,10 +29,12 @@ export function TeamSwitcherMenu({
   current,
   teams,
   tab = "",
+  base,
 }: {
   current: string;
   teams: TeamOption[];
   tab?: string;
+  base?: string;
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -92,7 +98,7 @@ export function TeamSwitcherMenu({
             return (
               <li key={team.id}>
                 <Link
-                  href={teamHref(team.id) + tab}
+                  href={hrefFor(base, team.id) + tab}
                   aria-current={isCurrent ? "true" : undefined}
                   onClick={() => menuRef.current?.hidePopover()}
                   className={cn(

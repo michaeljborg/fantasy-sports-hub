@@ -42,3 +42,30 @@ export function fields(entity: unknown): Obj {
 
 export const str = (value: unknown) =>
   typeof value === "string" ? value : typeof value === "number" ? String(value) : undefined;
+
+/** A number from Yahoo's string-typed numbers ("12", ".475"); undefined for "" or "-". */
+export const num = (value: unknown) => {
+  const s = str(value);
+  if (s === undefined || s.trim() === "") return undefined;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : undefined;
+};
+
+/** Yahoo flags are "1"/"0" strings (sometimes numbers). */
+export const flag = (value: unknown) => str(value) === "1";
+
+/**
+ * A sub-collection that Yahoo sometimes nests one level down under a numeric
+ * key, e.g. `roster: { coverage_type, "0": { players } }`.
+ */
+export function child(entity: unknown, key: string): unknown {
+  const obj = fields(entity);
+  if (key in obj) return obj[key];
+  for (const [k, value] of Object.entries(obj)) {
+    if (/^\d+$/.test(k)) {
+      const inner = fields(value);
+      if (key in inner) return inner[key];
+    }
+  }
+  return undefined;
+}

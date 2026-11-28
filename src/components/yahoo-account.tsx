@@ -1,44 +1,14 @@
-import { BasketballIcon, FootballIcon, HockeyIcon } from "@/components/icons";
+import Link from "next/link";
+import { SignInButton, SPORT_LABEL, SportIcon, TeamLogo, YAHOO_ATTRIBUTION } from "@/components/yahoo-ui";
+import { ordinal } from "@/lib/fantasy/format";
+import { teamHref } from "@/lib/my-teams/sections";
+import { teamSlug } from "@/lib/my-teams/slug";
+import { NAV_FORWARD } from "@/lib/navigation";
 import { getMyTeams, type YahooTeam } from "@/lib/yahoo/api";
 import { YahooAuthError } from "@/lib/yahoo/client";
 import { getSession } from "@/lib/yahoo/session";
 
-const SPORT_LABEL: Record<YahooTeam["sport"], string> = {
-  basketball: "Basketball",
-  football: "Football",
-  hockey: "Hockey",
-};
-
-const SPORT_ICON = {
-  basketball: BasketballIcon,
-  football: FootballIcon,
-  hockey: HockeyIcon,
-} satisfies Record<YahooTeam["sport"], unknown>;
-
-function SportIcon({ sport, className }: { sport: YahooTeam["sport"]; className?: string }) {
-  const Icon = SPORT_ICON[sport];
-  return <Icon className={className} />;
-}
-
-function SignInButton({ label = "Sign in with Yahoo" }: { label?: string }) {
-  return (
-    // A plain <a>: this is a full redirect to Yahoo and must not be prefetched.
-    <a
-      href="/api/auth/yahoo/login"
-      className="group inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg transition duration-200 ease-out hover:brightness-110 active:scale-95 motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0"
-    >
-      {label}
-      <span
-        aria-hidden
-        className="transition-transform duration-200 ease-out motion-safe:group-hover:translate-x-1"
-      >
-        →
-      </span>
-    </a>
-  );
-}
-
-function SignOutButton() {
+export function SignOutButton() {
   return (
     <form action="/api/auth/yahoo/logout" method="post">
       <button
@@ -130,36 +100,8 @@ export async function YahooAccount() {
         </div>
       )}
 
-      <p className="mt-6 text-xs text-fg-subtle">Fantasy data provided by Yahoo Fantasy</p>
+      <p className="mt-6 text-xs text-fg-subtle">{YAHOO_ATTRIBUTION}</p>
     </div>
-  );
-}
-
-function ordinal(n: number) {
-  const suffixes = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`;
-}
-
-function TeamLogo({ team }: { team: YahooTeam }) {
-  if (team.logoUrl) {
-    return (
-      // Yahoo serves logos from several CDNs; a plain <img> avoids an image-domain allowlist.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={team.logoUrl}
-        alt=""
-        width={40}
-        height={40}
-        loading="lazy"
-        className="size-10 shrink-0 rounded-lg bg-surface-muted object-cover"
-      />
-    );
-  }
-  return (
-    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-surface-muted font-display text-base font-bold uppercase">
-      {team.teamName.slice(0, 2)}
-    </span>
   );
 }
 
@@ -168,9 +110,14 @@ function TeamCard({ team }: { team: YahooTeam }) {
     ? `${team.record.w}–${team.record.l}${team.record.t ? `–${team.record.t}` : ""}`
     : undefined;
 
-  const body = (
-    <>
-      <TeamLogo team={team} />
+  return (
+    <Link
+      href={teamHref(teamSlug(team.teamKey))}
+      transitionTypes={NAV_FORWARD}
+      title={`Open ${team.teamName} in My Teams`}
+      className="flex h-16 items-center gap-3 rounded-xl border border-border bg-surface/70 px-3 shadow-card transition-[translate,border-color] duration-200 ease-out hover:border-border-strong motion-safe:hover:-translate-y-0.5"
+    >
+      <TeamLogo name={team.teamName} url={team.logoUrl} />
       <div className="min-w-0 flex-1">
         <p className="truncate font-semibold">{team.teamName}</p>
         <p className="truncate text-sm text-fg-muted">{team.leagueName}</p>
@@ -189,23 +136,7 @@ function TeamCard({ team }: { team: YahooTeam }) {
           </p>
         )}
       </div>
-    </>
-  );
-
-  const className =
-    "flex h-16 items-center gap-3 rounded-xl border border-border bg-surface/70 px-3 shadow-card";
-
-  if (!team.teamUrl) return <div className={className}>{body}</div>;
-  return (
-    <a
-      href={team.teamUrl}
-      target="_blank"
-      rel="noreferrer"
-      title={`Open ${team.teamName} on Yahoo`}
-      className={`${className} transition-[translate,border-color] duration-200 ease-out hover:border-border-strong motion-safe:hover:-translate-y-0.5`}
-    >
-      {body}
-    </a>
+    </Link>
   );
 }
 

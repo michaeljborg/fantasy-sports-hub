@@ -3,12 +3,13 @@
  * More endpoints (scoreboard, roster, free agents, transactions) get added
  * here as each feature moves off mock data.
  */
+import { cache } from "react";
 import type { SportId } from "@/lib/fantasy/types";
 import { yahooGet } from "./client";
-import { fields, list, str } from "./parse";
+import { fields, list, num, str } from "./parse";
 
 /** Yahoo game codes for the sports this app supports. */
-const SPORT_BY_GAME_CODE: Record<string, SportId> = {
+export const SPORT_BY_GAME_CODE: Record<string, SportId> = {
   nba: "basketball",
   nfl: "football",
   nhl: "hockey",
@@ -31,11 +32,6 @@ export type YahooTeam = {
   /** Current league rank; missing before the season starts */
   rank?: number;
   record?: { w: number; l: number; t: number };
-};
-
-const num = (value: unknown) => {
-  const n = Number(str(value));
-  return Number.isFinite(n) && str(value) !== "" ? n : undefined;
 };
 
 type Standing = Pick<YahooTeam, "rank" | "record">;
@@ -76,9 +72,10 @@ function userGames(content: Record<string, unknown>) {
 
 /**
  * Every current-season team the signed-in user manages in basketball,
- * football and hockey, with its league name.
+ * football and hockey, with its league name. Cached per request, so the
+ * layout and page share one set of Yahoo calls.
  */
-export async function getMyTeams(): Promise<YahooTeam[]> {
+export const getMyTeams = cache(async (): Promise<YahooTeam[]> => {
   const gameKeys = Object.keys(SPORT_BY_GAME_CODE).join(",");
   const [teamsContent, leaguesContent] = await Promise.all([
     yahooGet(`/users;use_login=1/games;game_keys=${gameKeys}/teams`),
@@ -122,4 +119,4 @@ export async function getMyTeams(): Promise<YahooTeam[]> {
 
   const standings = await getStandings(teams.map((t) => t.teamKey));
   return teams.map((team) => ({ ...team, ...standings.get(team.teamKey) }));
-}
+});
