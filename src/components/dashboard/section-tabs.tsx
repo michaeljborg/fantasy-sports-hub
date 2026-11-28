@@ -7,7 +7,11 @@ import { cn, NAV_BACK, NAV_FORWARD } from "@/lib/navigation";
 
 export type TabItem = { id: string; label: string; href: string; badge?: string };
 
-type Props = { items: TabItem[] };
+type Props = {
+  items: TabItem[];
+  /** Load each tab ahead of the click (Link prefetch={true}); used by My Teams. */
+  prefetch?: boolean;
+};
 
 /**
  * Sticky tab bar. Tabs to the right slide content forward, tabs to the left
@@ -20,7 +24,7 @@ export function SectionTabs(props: Props) {
 }
 
 /** Hook-free version, used as the Suspense fallback (no active tab). */
-export function SectionTabsView({ items, current = -1 }: Props & { current?: number }) {
+export function SectionTabsView({ items, current = -1, prefetch }: Props & { current?: number }) {
   return (
     <nav
       aria-label="Dashboard sections"
@@ -34,6 +38,7 @@ export function SectionTabsView({ items, current = -1 }: Props & { current?: num
             <li key={item.id} className="shrink-0">
               <Link
                 href={item.href}
+                prefetch={prefetch ? true : undefined}
                 transitionTypes={active || current < 0 ? undefined : i > current ? NAV_FORWARD : NAV_BACK}
                 aria-current={active ? "page" : undefined}
                 className={cn(

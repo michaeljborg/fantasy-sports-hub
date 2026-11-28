@@ -3,12 +3,15 @@
  * More endpoints (scoreboard, roster, free agents, transactions) get added
  * here as each feature moves off mock data.
  */
+import { cache } from "react";
 import type { SportId } from "@/lib/fantasy/types";
 import { yahooGet } from "./client";
-import { fields, list, str } from "./parse";
+import { fields, list, num, str } from "./parse";
+import { cached } from "./snapshots";
+import { rethrowNextErrors } from "@/lib/next-errors";
 
 /** Yahoo game codes for the sports this app supports. */
-const SPORT_BY_GAME_CODE: Record<string, SportId> = {
+export const SPORT_BY_GAME_CODE: Record<string, SportId> = {
   nba: "basketball",
   nfl: "football",
   nhl: "hockey",
@@ -33,11 +36,6 @@ export type YahooTeam = {
   record?: { w: number; l: number; t: number };
 };
 
-const num = (value: unknown) => {
-  const n = Number(str(value));
-  return Number.isFinite(n) && str(value) !== "" ? n : undefined;
-};
-
 type Standing = Pick<YahooTeam, "rank" | "record">;
 
 /**
@@ -60,7 +58,8 @@ async function getStandings(teamKeys: string[]): Promise<Map<string, Standing>> 
         record: w === undefined ? undefined : { w, l: num(totals.losses) ?? 0, t: num(totals.ties) ?? 0 },
       });
     }
-  } catch {
+  } catch (error) {
+    rethrowNextErrors(error);
     // Standings are optional.
   }
   return standings;
@@ -74,11 +73,8 @@ function userGames(content: Record<string, unknown>) {
   return list(fields(user).games, "game").map(fields);
 }
 
-/**
- * Every current-season team the signed-in user manages in basketball,
- * football and hockey, with its league name.
- */
-export async function getMyTeams(): Promise<YahooTeam[]> {
+/** Fetches the team list from Yahoo (3 requests). Use getMyTeams(), which saves it. */
+async function fetchMyTeams(): Promise<YahooTeam[]> {
   const gameKeys = Object.keys(SPORT_BY_GAME_CODE).join(",");
   const [teamsContent, leaguesContent] = await Promise.all([
     yahooGet(`/users;use_login=1/games;game_keys=${gameKeys}/teams`),
@@ -123,3 +119,23 @@ export async function getMyTeams(): Promise<YahooTeam[]> {
   const standings = await getStandings(teams.map((t) => t.teamKey));
   return teams.map((team) => ({ ...team, ...standings.get(team.teamKey) }));
 }
+
+/**
+ * Every current-season team the signed-in user manages in basketball,
+ * football and hockey. Saved weekly (see ./snapshots): it refreshes after the
+ * latest week cutoff among the sports you play. Cached per request too, so the
+ * layout and page share one read.
+ */
+export const getMyTeams = cache(() =>
+  cached(
+    {
+      kind: "teams",
+      key: "",
+      tier: "weekly",
+      sportOf: (teams: YahooTeam[]) => [...new Set(teams.map((t) => t.sport))],
+      // The header's team list shouldn't set the page's "data from" time.
+      trackAge: false,
+    },
+    fetchMyTeams,
+  ),
+);

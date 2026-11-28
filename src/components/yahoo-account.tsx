@@ -1,44 +1,16 @@
-import { BasketballIcon, FootballIcon, HockeyIcon } from "@/components/icons";
+import { cacheLife } from "next/cache";
+import Link from "next/link";
+import { SignInButton, SPORT_LABEL, SportIcon, TeamLogo, YAHOO_ATTRIBUTION } from "@/components/yahoo-ui";
+import { ordinal } from "@/lib/fantasy/format";
+import { teamHref } from "@/lib/my-teams/sections";
+import { teamSlug } from "@/lib/my-teams/slug";
+import { NAV_FORWARD } from "@/lib/navigation";
 import { getMyTeams, type YahooTeam } from "@/lib/yahoo/api";
 import { YahooAuthError } from "@/lib/yahoo/client";
 import { getSession } from "@/lib/yahoo/session";
+import { rethrowNextErrors } from "@/lib/next-errors";
 
-const SPORT_LABEL: Record<YahooTeam["sport"], string> = {
-  basketball: "Basketball",
-  football: "Football",
-  hockey: "Hockey",
-};
-
-const SPORT_ICON = {
-  basketball: BasketballIcon,
-  football: FootballIcon,
-  hockey: HockeyIcon,
-} satisfies Record<YahooTeam["sport"], unknown>;
-
-function SportIcon({ sport, className }: { sport: YahooTeam["sport"]; className?: string }) {
-  const Icon = SPORT_ICON[sport];
-  return <Icon className={className} />;
-}
-
-function SignInButton({ label = "Sign in with Yahoo" }: { label?: string }) {
-  return (
-    // A plain <a>: this is a full redirect to Yahoo and must not be prefetched.
-    <a
-      href="/api/auth/yahoo/login"
-      className="group inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-fg transition duration-200 ease-out hover:brightness-110 active:scale-95 motion-safe:hover:-translate-y-0.5 motion-safe:active:translate-y-0"
-    >
-      {label}
-      <span
-        aria-hidden
-        className="transition-transform duration-200 ease-out motion-safe:group-hover:translate-x-1"
-      >
-        →
-      </span>
-    </a>
-  );
-}
-
-function SignOutButton() {
+export function SignOutButton() {
   return (
     <form action="/api/auth/yahoo/logout" method="post">
       <button
@@ -51,38 +23,63 @@ function SignOutButton() {
   );
 }
 
+type Account =
+  | { status: "signed-out" }
+  | { status: "expired" }
+  | { status: "error"; message: string }
+  | { status: "ok"; name?: string; teams: YahooTeam[] };
+
 /**
- * Yahoo sign-in state for the home page. Reads the session cookie, so render
- * it inside <Suspense>: with Cache Components the rest of the page stays
- * prerendered and only this part is rendered per request.
+ * The visitor's sign-in state and team list. `use cache: private` keeps the
+ * result in the visitor's browser (never on the server) for 5 minutes, which
+ * puts it in the home page's per-session shell: coming back to the home page
+ * from an app shows the teams immediately instead of loading them again.
+ * Sign-in and sign-out are full page loads, and My Teams' Refresh calls
+ * refresh(); all of them clear this browser copy.
+ */
+async function getAccount(): Promise<Account> {
+  "use cache: private";
+  cacheLife({ stale: 300 });
+
+  const session = await getSession();
+  if (!session) return { status: "signed-out" };
+  try {
+    const teams = await getMyTeams();
+    return { status: "ok", name: session.name ?? teams.find((t) => t.managerName)?.managerName, teams };
+  } catch (error) {
+    rethrowNextErrors(error);
+    if (error instanceof YahooAuthError) return { status: "expired" };
+    return { status: "error", message: (error as Error).message };
+  }
+}
+
+/**
+ * Yahoo sign-in state for the home page. Render it inside <Suspense>: the rest
+ * of the page is prerendered, and this part comes from the per-session shell
+ * (see getAccount) or, on a cold load, streams in behind YahooAccountSkeleton.
  */
 export async function YahooAccount() {
-  const session = await getSession();
-  if (!session) return <SignInButton />;
+  const account = await getAccount();
 
-  let teams: YahooTeam[];
-  try {
-    teams = await getMyTeams();
-  } catch (error) {
-    if (error instanceof YahooAuthError) {
-      return (
-        <div className="flex flex-wrap items-center gap-4">
-          <SignInButton label="Sign in with Yahoo again" />
-          <p className="text-sm text-fg-muted">Your Yahoo session expired.</p>
-        </div>
-      );
-    }
+  if (account.status === "signed-out") return <SignInButton />;
+  if (account.status === "expired") {
+    return (
+      <div className="flex flex-wrap items-center gap-4">
+        <SignInButton label="Sign in with Yahoo again" />
+        <p className="text-sm text-fg-muted">Your Yahoo session expired.</p>
+      </div>
+    );
+  }
+  if (account.status === "error") {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-danger">
-          Couldn&apos;t load your Yahoo leagues: {(error as Error).message}
-        </p>
+        <p className="text-sm text-danger">Couldn&apos;t load your Yahoo leagues: {account.message}</p>
         <SignOutButton />
       </div>
     );
   }
 
-  const name = session.name ?? teams.find((t) => t.managerName)?.managerName;
+  const { name, teams } = account;
 
   // Group by sport, keeping the order Yahoo returned them in.
   const bySport = new Map<YahooTeam["sport"], YahooTeam[]>();
@@ -130,36 +127,8 @@ export async function YahooAccount() {
         </div>
       )}
 
-      <p className="mt-6 text-xs text-fg-subtle">Fantasy data provided by Yahoo Fantasy</p>
+      <p className="mt-6 text-xs text-fg-subtle">{YAHOO_ATTRIBUTION}</p>
     </div>
-  );
-}
-
-function ordinal(n: number) {
-  const suffixes = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`;
-}
-
-function TeamLogo({ team }: { team: YahooTeam }) {
-  if (team.logoUrl) {
-    return (
-      // Yahoo serves logos from several CDNs; a plain <img> avoids an image-domain allowlist.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={team.logoUrl}
-        alt=""
-        width={40}
-        height={40}
-        loading="lazy"
-        className="size-10 shrink-0 rounded-lg bg-surface-muted object-cover"
-      />
-    );
-  }
-  return (
-    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-surface-muted font-display text-base font-bold uppercase">
-      {team.teamName.slice(0, 2)}
-    </span>
   );
 }
 
@@ -168,9 +137,16 @@ function TeamCard({ team }: { team: YahooTeam }) {
     ? `${team.record.w}–${team.record.l}${team.record.t ? `–${team.record.t}` : ""}`
     : undefined;
 
-  const body = (
-    <>
-      <TeamLogo team={team} />
+  return (
+    <Link
+      href={teamHref(teamSlug(team.teamKey))}
+      // Loads the team's page ahead of the click, so opening it is instant.
+      prefetch
+      transitionTypes={NAV_FORWARD}
+      title={`Open ${team.teamName} in My Teams`}
+      className="flex h-16 items-center gap-3 rounded-xl border border-border bg-surface/70 px-3 shadow-card transition-[translate,border-color] duration-200 ease-out hover:border-border-strong motion-safe:hover:-translate-y-0.5"
+    >
+      <TeamLogo name={team.teamName} url={team.logoUrl} />
       <div className="min-w-0 flex-1">
         <p className="truncate font-semibold">{team.teamName}</p>
         <p className="truncate text-sm text-fg-muted">{team.leagueName}</p>
@@ -189,26 +165,36 @@ function TeamCard({ team }: { team: YahooTeam }) {
           </p>
         )}
       </div>
-    </>
-  );
-
-  const className =
-    "flex h-16 items-center gap-3 rounded-xl border border-border bg-surface/70 px-3 shadow-card";
-
-  if (!team.teamUrl) return <div className={className}>{body}</div>;
-  return (
-    <a
-      href={team.teamUrl}
-      target="_blank"
-      rel="noreferrer"
-      title={`Open ${team.teamName} on Yahoo`}
-      className={`${className} transition-[translate,border-color] duration-200 ease-out hover:border-border-strong motion-safe:hover:-translate-y-0.5`}
-    >
-      {body}
-    </a>
+    </Link>
   );
 }
 
+const pulse = "rounded-xl bg-surface-muted motion-safe:animate-pulse";
+
+/**
+ * Cold-load placeholder (first visit, or after 5 minutes), built from the same
+ * header row and grid as the real block, so the first row of teams lands
+ * exactly where the placeholder was.
+ */
 export function YahooAccountSkeleton() {
-  return <div className="h-10 w-48 animate-pulse rounded-full bg-surface-muted" />;
+  return (
+    <div aria-busy="true" aria-label="Loading your teams">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <h2 className="text-sm font-semibold text-fg-muted">Your teams</h2>
+        <div className="hidden h-px flex-1 bg-fg/30 sm:block" />
+        <div className={`h-5 w-44 rounded-full ${pulse}`} />
+      </div>
+      <div className="mt-5 grid grid-cols-[2rem_1fr] items-start gap-3 sm:gap-4">
+        <div className="flex h-16 items-center justify-center">
+          <div className={`size-7 rounded-full ${pulse}`} />
+        </div>
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {/* One card on phones, two on tablets, three on desktop: one full row of the real grid. */}
+          {["", "hidden sm:block", "hidden lg:block"].map((visibility, i) => (
+            <li key={i} className={`h-16 ${visibility} ${pulse}`} />
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
 }

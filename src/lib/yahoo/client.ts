@@ -31,6 +31,9 @@ export async function yahooGet(path: string): Promise<Record<string, unknown>> {
   const session = await getSession();
   if (!session) throw new YahooAuthError();
 
+  // Dev only: shows in the terminal how often Yahoo is actually called.
+  if (process.env.NODE_ENV === "development") console.log(`Yahoo GET ${path}`);
+
   const url = `${BASE_URL}${path}${path.includes("?") ? "&" : "?"}format=json`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${session.accessToken}` },

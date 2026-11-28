@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { fetchYahooGuid } from "@/lib/yahoo/identity";
 import { exchangeCode, yahooConfig } from "@/lib/yahoo/oauth";
 import {
   SESSION_COOKIE,
@@ -32,7 +33,10 @@ export async function GET(request: NextRequest) {
   let sealed: string;
   try {
     const tokens = await exchangeCode(yahooConfig(request.nextUrl.origin), code);
-    sealed = await sealSession(sessionFromTokens(tokens));
+    const session = sessionFromTokens(tokens);
+    // Saved data is keyed by the Yahoo user ID, which the tokens usually don't include.
+    session.guid ??= await fetchYahooGuid(session.accessToken);
+    sealed = await sealSession(session);
   } catch (error) {
     return new Response(`Couldn't complete Yahoo sign-in: ${(error as Error).message}`, {
       status: 502,
