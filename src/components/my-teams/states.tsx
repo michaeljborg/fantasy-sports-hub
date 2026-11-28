@@ -1,5 +1,5 @@
 import { SignInButton } from "@/components/yahoo-ui";
-import { YahooAuthError } from "@/lib/yahoo/client";
+import type { Problem } from "@/lib/my-teams/loaders";
 
 function Box({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -20,8 +20,8 @@ export function SignInPrompt() {
 }
 
 /** What to show when a Yahoo read fails: a sign-in button if the session expired, else the error. */
-export function LoadError({ error, what }: { error: unknown; what: string }) {
-  if (error instanceof YahooAuthError) {
+export function LoadError({ problem, what }: { problem: Problem; what: string }) {
+  if (problem.expired) {
     return (
       <Box title="Yahoo session expired">
         <p>Sign in again to load {what}.</p>
@@ -32,7 +32,7 @@ export function LoadError({ error, what }: { error: unknown; what: string }) {
   return (
     <Box title={`Couldn't load ${what}`}>
       <p>Yahoo returned an error. Reload the page to try again.</p>
-      <p className="text-xs break-all text-fg-subtle">{(error as Error)?.message}</p>
+      <p className="text-xs break-all text-fg-subtle">{problem.message}</p>
     </Box>
   );
 }

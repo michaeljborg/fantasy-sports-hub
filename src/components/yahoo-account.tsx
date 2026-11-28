@@ -140,6 +140,8 @@ function TeamCard({ team }: { team: YahooTeam }) {
   return (
     <Link
       href={teamHref(teamSlug(team.teamKey))}
+      // Loads the team's page ahead of the click, so opening it is instant.
+      prefetch
       transitionTypes={NAV_FORWARD}
       title={`Open ${team.teamName} in My Teams`}
       className="flex h-16 items-center gap-3 rounded-xl border border-border bg-surface/70 px-3 shadow-card transition-[translate,border-color] duration-200 ease-out hover:border-border-strong motion-safe:hover:-translate-y-0.5"

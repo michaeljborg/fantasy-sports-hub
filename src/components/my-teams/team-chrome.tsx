@@ -3,7 +3,9 @@
  * the same size, so nothing moves when the real content arrives:
  * - BackLink is static.
  * - TeamTabs only needs the URL, so it appears almost at once.
- * - TeamHeader needs your team list (one database read), then fades in.
+ * - TeamHeader needs your team list (one database read), then fades in. Its
+ *   loader is private-cached and links into My Teams prefetch, so it's
+ *   usually ready before you arrive.
  * All stay mounted while switching tabs.
  */
 import Link from "next/link";
@@ -14,7 +16,9 @@ import { ArrowLeftIcon, ArrowUpRightIcon } from "@/components/icons";
 import { SPORT_LABEL, SportIcon, TeamLogo } from "@/components/yahoo-ui";
 import { ordinal } from "@/lib/fantasy/format";
 import { recordText } from "@/lib/my-teams/format";
-import { loadMyTeam, type TeamParams } from "@/lib/my-teams/load";
+import { notFound, redirect } from "next/navigation";
+import { keysFromParams, type TeamParams } from "@/lib/my-teams/load";
+import { loadTeamHeader } from "@/lib/my-teams/loaders";
 import { MY_TEAMS_BASE, sectionHref, sections } from "@/lib/my-teams/sections";
 import { teamSlug } from "@/lib/my-teams/slug";
 import { NAV_BACK } from "@/lib/navigation";
@@ -34,16 +38,20 @@ export function BackLink() {
 }
 
 export async function TeamHeader({ params }: { params: TeamParams }) {
-  const result = await loadMyTeam(params);
-  if (!result.ok) {
+  const { slug, teamKey, leagueKey } = await keysFromParams(params);
+  const result = await loadTeamHeader(teamKey, leagueKey);
+  if (result.status === "signed-out") redirect("/my-teams");
+  if (result.status === "error") {
     return (
       <div className="mt-6">
-        <LoadError error={result.error} what="your Yahoo teams" />
+        <LoadError problem={result.problem} what="your Yahoo teams" />
       </div>
     );
   }
+  // Only your own teams can be opened.
+  if (!result.data) notFound();
 
-  const { slug, team, teams } = result;
+  const { team, teams } = result.data;
   const options = teams.map((t) => ({ id: teamSlug(t.teamKey), name: t.teamName, league: t.leagueName }));
 
   return (
@@ -59,8 +67,10 @@ export async function TeamHeader({ params }: { params: TeamParams }) {
         </h1>
         <div className="mt-2 flex min-h-[30px] flex-wrap items-center gap-x-3 gap-y-2 text-sm text-fg-muted">
           {options.length > 1 ? (
-            <Suspense fallback={<TeamSwitcherMenu current={slug} teams={options} base={MY_TEAMS_BASE} />}>
-              <TeamSwitcher current={slug} teams={options} base={MY_TEAMS_BASE} />
+            <Suspense
+              fallback={<TeamSwitcherMenu current={slug} teams={options} base={MY_TEAMS_BASE} prefetch />}
+            >
+              <TeamSwitcher current={slug} teams={options} base={MY_TEAMS_BASE} prefetch />
             </Suspense>
           ) : (
             <span>{team.leagueName}</span>
@@ -110,9 +120,10 @@ export function TeamHeaderSkeleton() {
 export async function TeamTabs({ params }: { params: TeamParams }) {
   const { team: slug } = await params;
   const tabs: TabItem[] = sections.map((s) => ({ id: s.id, label: s.label, href: sectionHref(slug, s.id) }));
+  // prefetch: each tab loads ahead, so switching tabs is instant.
   return (
-    <Suspense fallback={<SectionTabsView items={tabs} />}>
-      <SectionTabs items={tabs} />
+    <Suspense fallback={<SectionTabsView items={tabs} prefetch />}>
+      <SectionTabs items={tabs} prefetch />
     </Suspense>
   );
 }

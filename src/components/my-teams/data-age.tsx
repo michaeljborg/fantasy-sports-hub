@@ -1,4 +1,3 @@
-import { dataAge } from "@/lib/yahoo/snapshots";
 import { RefreshButton } from "./refresh-button";
 
 // Server-rendered, so pin the zone (Vercel runs on UTC). Eastern matches the weekly cutoff.
@@ -13,17 +12,17 @@ const WHEN = new Intl.DateTimeFormat("en-US", {
 });
 
 /**
- * "Yahoo data from Mon, Nov 23, 6:12 AM · Refresh". Render it after the page's
- * Yahoo reads have finished, so it sees how old they are. Shows nothing when
- * there's no database (the data is always live then).
+ * "Yahoo data from Mon, Nov 23, 6:12 AM EST · Refresh". `fetchedAt` comes from
+ * the page's loader (see src/lib/my-teams/loaders.ts); without a database it's
+ * missing and nothing is shown, since the data is always live then.
  */
-export function DataAge({ slug }: { slug: string }) {
-  const fetchedAt = dataAge();
+export function DataAge({ slug, fetchedAt }: { slug: string; fetchedAt?: string }) {
   if (!fetchedAt) return null;
+  const when = new Date(fetchedAt);
   return (
     <p className="mt-8 flex flex-wrap items-center gap-x-2 text-xs text-fg-subtle">
       <span>
-        Yahoo data from <time dateTime={fetchedAt.toISOString()}>{WHEN.format(fetchedAt)}</time>
+        Yahoo data from <time dateTime={fetchedAt}>{WHEN.format(when)}</time>
       </span>
       <span aria-hidden>·</span>
       <RefreshButton slug={slug} />

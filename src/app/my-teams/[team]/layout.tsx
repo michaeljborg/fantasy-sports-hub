@@ -7,7 +7,6 @@ import {
   TeamTabs,
   TeamTabsPlaceholder,
 } from "@/components/my-teams/team-chrome";
-import { WarmTeam } from "@/components/my-teams/warm-team";
 import { PageTransition } from "@/components/page-transition";
 import { YAHOO_ATTRIBUTION } from "@/components/yahoo-ui";
 import { accentStyle, getApp } from "@/lib/apps";
@@ -21,6 +20,8 @@ export const metadata: Metadata = {
 // Teams come from the visitor's Yahoo session, so they can't be listed with
 // generateStaticParams. The header, tabs and each tab's content stream in
 // behind same-size placeholders; tab-to-tab navigations keep the header mounted.
+// Links into My Teams use prefetch={true}, so pages usually load ahead of the
+// click (see src/lib/my-teams/loaders.ts).
 export const instant = false;
 
 export default function MyTeamLayout({ children, params }: LayoutProps<"/my-teams/[team]">) {
@@ -36,10 +37,6 @@ export default function MyTeamLayout({ children, params }: LayoutProps<"/my-team
         </Suspense>
         <Suspense fallback={<TeamTabsPlaceholder />}>
           <TeamTabs params={params} />
-        </Suspense>
-        {/* Loads all four tabs' data on entering a team; renders nothing. */}
-        <Suspense fallback={null}>
-          <WarmTeam params={params} />
         </Suspense>
         <div className="mt-6 sm:mt-8">{children}</div>
         <p className="mt-10 text-xs text-fg-subtle">{YAHOO_ATTRIBUTION}</p>

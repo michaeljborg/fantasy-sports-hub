@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/app-header";
 import { Empty, LoadError, SignInPrompt } from "@/components/my-teams/states";
 import { PageTransition } from "@/components/page-transition";
 import { accentStyle, getApp } from "@/lib/apps";
+import { toProblem } from "@/lib/my-teams/loaders";
 import { teamHref } from "@/lib/my-teams/sections";
 import { teamSlug } from "@/lib/my-teams/slug";
 import { getMyTeams, type YahooTeam } from "@/lib/yahoo/api";
@@ -45,7 +46,7 @@ async function OpenFirstTeam() {
     teams = await getMyTeams();
   } catch (error) {
     rethrowNextErrors(error);
-    return <LoadError error={error} what="your Yahoo teams" />;
+    return <LoadError problem={toProblem(error)} what="your Yahoo teams" />;
   }
   if (!teams.length) {
     return (

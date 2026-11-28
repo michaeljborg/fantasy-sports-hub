@@ -1,22 +1,20 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { DataAge } from "@/components/my-teams/data-age";
 import { RosterList } from "@/components/my-teams/roster-list";
 import { Empty, LoadError } from "@/components/my-teams/states";
 import { TabSkeleton } from "@/components/my-teams/tab-skeleton";
-import { teamFromParams, type TeamParams } from "@/lib/my-teams/load";
-import { getLeague, getRoster, isPointsLeague } from "@/lib/yahoo/team";
-import { rethrowNextErrors } from "@/lib/next-errors";
+import { keysFromParams, type TeamParams } from "@/lib/my-teams/load";
+import { loadRoster } from "@/lib/my-teams/loaders";
+import { isPointsLeague } from "@/lib/yahoo/team";
 
 export const metadata: Metadata = { title: "Roster" };
 
-// The page itself reads nothing, so switching to this tab shows the skeleton
-// immediately while the content below streams in. No slide animation here:
-// the content arrives in a second update, which would replay the slide (a shake).
+// See the Overview page for how loading and prefetching work.
 export default function RosterPage({ params }: PageProps<"/my-teams/[team]/roster">) {
   return (
     <Suspense fallback={<TabSkeleton />}>
-      {/* Inside the boundary, so it fades in only when the content replaces the skeleton. */}
       <div className="motion-safe:animate-fade-in">
         <Roster params={params} />
       </div>
@@ -25,17 +23,11 @@ export default function RosterPage({ params }: PageProps<"/my-teams/[team]/roste
 }
 
 async function Roster({ params }: { params: TeamParams }) {
-  const { slug, teamKey, leagueKey } = await teamFromParams(params);
-
-  let data;
-  try {
-    const [league, players] = await Promise.all([getLeague(leagueKey), getRoster(teamKey)]);
-    data = { league, players };
-  } catch (error) {
-    rethrowNextErrors(error);
-    return <LoadError error={error} what="your roster" />;
-  }
-  const { league, players } = data;
+  const { slug, teamKey, leagueKey } = await keysFromParams(params);
+  const result = await loadRoster(teamKey, leagueKey);
+  if (result.status === "signed-out") redirect("/my-teams");
+  if (result.status === "error") return <LoadError problem={result.problem} what="your roster" />;
+  const { league, players } = result.data;
 
   return (
     <>
@@ -49,7 +41,7 @@ async function Roster({ params }: { params: TeamParams }) {
       ) : (
         <Empty title="No players yet">Your roster fills in after the draft.</Empty>
       )}
-      <DataAge slug={slug} />
+      <DataAge slug={slug} fetchedAt={result.fetchedAt} />
     </>
   );
 }

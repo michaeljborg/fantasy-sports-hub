@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { DataAge } from "@/components/my-teams/data-age";
 import { SeasonStats } from "@/components/my-teams/season-stats";
@@ -7,22 +8,17 @@ import { LoadError } from "@/components/my-teams/states";
 import { TabSkeleton } from "@/components/my-teams/tab-skeleton";
 import { LeagueFacts, TeamStatus } from "@/components/my-teams/team-info";
 import { ThisWeekCard } from "@/components/my-teams/this-week-card";
-import { teamFromParams, type TeamParams } from "@/lib/my-teams/load";
-import {
-  currentWeekOf,
-  getLeague,
-  getSeasonStats,
-  getTeamDetails,
-  getThisWeek,
-  isPointsLeague,
-} from "@/lib/yahoo/team";
-import { fallbackTo, rethrowNextErrors } from "@/lib/next-errors";
+import { keysFromParams, type TeamParams } from "@/lib/my-teams/load";
+import { loadOverview } from "@/lib/my-teams/loaders";
+import { isPointsLeague } from "@/lib/yahoo/team";
 
 export const metadata: Metadata = { title: "Overview" };
 
 // The page itself reads nothing, so switching to this tab shows the skeleton
-// immediately while the content below streams in. No slide animation here:
-// the content arrives in a second update, which would replay the slide (a shake).
+// immediately while the content below streams in. Links into My Teams use
+// prefetch={true}, so the content is usually loaded before the click (see
+// src/lib/my-teams/loaders.ts). No slide animation: the content arrives in a
+// second update, which would replay it.
 export default function OverviewPage({ params }: PageProps<"/my-teams/[team]">) {
   return (
     <Suspense fallback={<TabSkeleton variant="overview" />}>
@@ -34,29 +30,12 @@ export default function OverviewPage({ params }: PageProps<"/my-teams/[team]">) 
   );
 }
 
-async function loadOverview(teamKey: string, leagueKey: string) {
-  const league = await getLeague(leagueKey);
-  const week = currentWeekOf(league);
-  const [details, season, thisWeek] = await Promise.all([
-    getTeamDetails(teamKey, league.sport),
-    // Optional extras: the page still renders if either is rejected.
-    getSeasonStats(league, teamKey).catch(fallbackTo(null)),
-    week ? getThisWeek(teamKey, week, league.sport).catch(fallbackTo(null)) : null,
-  ]);
-  return { league, details, season, thisWeek };
-}
-
 async function Overview({ params }: { params: TeamParams }) {
-  const { slug, teamKey, leagueKey } = await teamFromParams(params);
-
-  let data: Awaited<ReturnType<typeof loadOverview>>;
-  try {
-    data = await loadOverview(teamKey, leagueKey);
-  } catch (error) {
-    rethrowNextErrors(error);
-    return <LoadError error={error} what="this team" />;
-  }
-  const { league, details, season, thisWeek } = data;
+  const { slug, teamKey, leagueKey } = await keysFromParams(params);
+  const result = await loadOverview(teamKey, leagueKey);
+  if (result.status === "signed-out") redirect("/my-teams");
+  if (result.status === "error") return <LoadError problem={result.problem} what="this team" />;
+  const { league, details, season, thisWeek } = result.data;
 
   return (
     <>
@@ -79,7 +58,7 @@ async function Overview({ params }: { params: TeamParams }) {
         </div>
         {season && <SeasonStats stats={season} points={isPointsLeague(league)} />}
       </div>
-      <DataAge slug={slug} />
+      <DataAge slug={slug} fetchedAt={result.fetchedAt} />
     </>
   );
 }

@@ -18,7 +18,7 @@ const hrefFor = (base: string | undefined, id: string) =>
   base ? `${base}/${id}` : matchupTeamHref(id);
 
 /** Switches between the user's teams, staying on the same tab. */
-export function TeamSwitcher(props: { current: string; teams: TeamOption[]; base?: string }) {
+export function TeamSwitcher(props: { current: string; teams: TeamOption[]; base?: string; prefetch?: boolean }) {
   const pathname = usePathname();
   const tab = pathname.slice(hrefFor(props.base, props.current).length);
   return <TeamSwitcherMenu {...props} tab={tab} />;
@@ -30,11 +30,14 @@ export function TeamSwitcherMenu({
   teams,
   tab = "",
   base,
+  prefetch,
 }: {
   current: string;
   teams: TeamOption[];
   tab?: string;
   base?: string;
+  /** Load each team's page ahead of the click (once the menu is open); used by My Teams. */
+  prefetch?: boolean;
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -99,6 +102,7 @@ export function TeamSwitcherMenu({
               <li key={team.id}>
                 <Link
                   href={hrefFor(base, team.id) + tab}
+                  prefetch={prefetch ? true : undefined}
                   aria-current={isCurrent ? "true" : undefined}
                   onClick={() => menuRef.current?.hidePopover()}
                   className={cn(

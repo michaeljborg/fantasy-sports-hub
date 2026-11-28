@@ -135,7 +135,8 @@ With `DATABASE_URL` set, each Yahoo read is saved per user in the `yahoo_snapsho
 | Team list, standings, this week's opponent, league settings, team details, season stats, draft | Weekly: after Monday 6:00 AM US Eastern (Tuesday for football) |
 | Roster (injuries, lineup) and Activity (moves, pending claims) | At most once an hour |
 
-- Entering a team loads all four tabs' data at once (about 9 Yahoo calls for a head-to-head team in season), so switching between Overview, Roster, Draft and Activity makes no Yahoo calls. This only happens with a database.
+- Pages load ahead of your clicks. Each page's data is read through a `'use cache: private'` loader (`src/lib/my-teams/loaders.ts`), which your browser keeps for 5 minutes. Links into My Teams use `prefetch={true}`: the home-page team cards, the four tabs, and the team switcher once it's open. So opening a team or switching tabs usually shows the page immediately.
+- Each prefetched link is a background request. It's normally one database read; Yahoo is only called when that page's data is due. On the first home visit after the weekly cutoff, every team's Overview is fetched in the background (about 4 Yahoo calls per team).
 - Each My Teams tab shows when its data was fetched, plus a **Refresh** button that fetches that team fresh.
 - If Yahoo fails and a saved copy exists, the saved copy is shown instead of an error.
 - Changing how Yahoo data is parsed? Bump `VERSION` in `snapshots.ts` so old saved copies are ignored.

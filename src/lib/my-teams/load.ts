@@ -1,47 +1,16 @@
-import { notFound, redirect } from "next/navigation";
-import { getMyTeams, type YahooTeam } from "@/lib/yahoo/api";
-import { getSession } from "@/lib/yahoo/session";
-import { scopeToTeam } from "@/lib/yahoo/snapshots";
+import { notFound } from "next/navigation";
 import { leagueKeyOf, teamKeyFromSlug } from "./slug";
-import { rethrowNextErrors } from "@/lib/next-errors";
 
 export type TeamParams = Promise<{ team: string }>;
 
 /**
- * Resolves the team in the URL. Signed out -> /my-teams (sign-in prompt);
- * a malformed slug -> not found. Pages call this to get the keys they need;
- * the layout also checks the team is one of the user's own (see loadMyTeam).
+ * The team and league keys from the URL; a malformed slug -> not found.
+ * Doesn't read the session: the loaders in ./loaders do that, inside their
+ * private cache, and report "signed-out" so the page can redirect.
  */
-export async function teamFromParams(params: TeamParams) {
+export async function keysFromParams(params: TeamParams) {
   const { team: slug } = await params;
-  if (!(await getSession())) redirect("/my-teams");
   const teamKey = teamKeyFromSlug(slug);
   if (!teamKey) notFound();
-  const leagueKey = leagueKeyOf(teamKey);
-  // The header, warm-up and tab then read all their saved data in one query.
-  scopeToTeam(teamKey, leagueKey);
-  return { slug, teamKey, leagueKey };
-}
-
-export type MyTeamResult =
-  | { ok: true; slug: string; team: YahooTeam; teams: YahooTeam[] }
-  | { ok: false; slug: string; error: unknown };
-
-/**
- * The team in the URL plus all the user's teams (for the switcher). Only the
- * user's own teams can be opened. Yahoo errors come back as `{ ok: false }`
- * so the caller can show them; redirect/notFound are thrown as usual.
- */
-export async function loadMyTeam(params: TeamParams): Promise<MyTeamResult> {
-  const { slug, teamKey } = await teamFromParams(params);
-  let teams: YahooTeam[];
-  try {
-    teams = await getMyTeams();
-  } catch (error) {
-    rethrowNextErrors(error);
-    return { ok: false, slug, error };
-  }
-  const team = teams.find((t) => t.teamKey === teamKey);
-  if (!team) notFound();
-  return { ok: true, slug, team, teams };
+  return { slug, teamKey, leagueKey: leagueKeyOf(teamKey) };
 }
