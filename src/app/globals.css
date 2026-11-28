@@ -5,6 +5,10 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    /* Always reserve the scrollbar's space, so content doesn't shift sideways
+       when a page grows tall enough to scroll (e.g. a short loading
+       placeholder replaced by a long roster). */
+    scrollbar-gutter: stable;
   }
 
   body {

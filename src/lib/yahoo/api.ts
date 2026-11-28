@@ -8,6 +8,7 @@ import type { SportId } from "@/lib/fantasy/types";
 import { yahooGet } from "./client";
 import { fields, list, num, str } from "./parse";
 import { cached } from "./snapshots";
+import { rethrowNextErrors } from "@/lib/next-errors";
 
 /** Yahoo game codes for the sports this app supports. */
 export const SPORT_BY_GAME_CODE: Record<string, SportId> = {
@@ -57,7 +58,8 @@ async function getStandings(teamKeys: string[]): Promise<Map<string, Standing>> 
         record: w === undefined ? undefined : { w, l: num(totals.losses) ?? 0, t: num(totals.ties) ?? 0 },
       });
     }
-  } catch {
+  } catch (error) {
+    rethrowNextErrors(error);
     // Standings are optional.
   }
   return standings;

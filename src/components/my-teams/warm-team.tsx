@@ -3,6 +3,8 @@ import type { TeamParams } from "@/lib/my-teams/load";
 import { leagueKeyOf, teamKeyFromSlug } from "@/lib/my-teams/slug";
 import { warmTeam } from "@/lib/my-teams/warm";
 import { getSession } from "@/lib/yahoo/session";
+import { scopeToTeam } from "@/lib/yahoo/snapshots";
+import { rethrowNextErrors } from "@/lib/next-errors";
 
 /**
  * Renders nothing. On entering a team (not on tab switches: the layout stays
@@ -16,9 +18,12 @@ export async function WarmTeam({ params }: { params: TeamParams }) {
   // Signed out or a bad link: the header shows the right message, so just stop.
   if (!teamKey || !(await getSession())) return null;
 
+  const leagueKey = leagueKeyOf(teamKey);
+  scopeToTeam(teamKey, leagueKey);
   try {
-    await warmTeam(teamKey, leagueKeyOf(teamKey));
-  } catch {
+    await warmTeam(teamKey, leagueKey);
+  } catch (error) {
+    rethrowNextErrors(error);
     // Only getLeague can throw here; the tab pages show that error themselves.
   }
   return null;

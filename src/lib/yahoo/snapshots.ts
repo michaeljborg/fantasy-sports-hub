@@ -12,6 +12,7 @@
  */
 import { cache } from "react";
 import { db } from "@/lib/db";
+import { rethrowNextErrors } from "@/lib/next-errors";
 import type { SportId } from "@/lib/fantasy/types";
 import { getSession } from "./session";
 
@@ -125,6 +126,44 @@ function isFresh<T>(opts: Options<T>, data: T, fetchedAt: Date, now: Date) {
   return fetchedAt >= latestCutoff(sports, now);
 }
 
+// ---------------------------------------------------------------------------
+// One query per team page: everything saved for the team, its league and the
+// team list is read together, so the header and the tab arrive at the same
+// time instead of in a series of separate lookups.
+// ---------------------------------------------------------------------------
+
+type Row = { data: unknown; fetchedAt: Date };
+
+/** Per request: the team the page is about, if any (see scopeToTeam). */
+const scope = cache(() => ({ team: undefined as { teamKey: string; leagueKey: string } | undefined }));
+
+/** Call before a team page's reads, so they share one database query. */
+export function scopeToTeam(teamKey: string, leagueKey: string) {
+  scope().team = { teamKey, leagueKey };
+}
+
+const inScope = (key: string, s: { teamKey: string; leagueKey: string }) =>
+  key === s.teamKey || key === s.leagueKey || key === "" || key.startsWith(`${s.teamKey}:`);
+
+const teamRows = cache(async (guid: string, teamKey: string, leagueKey: string) => {
+  const rows = await db()!`
+    select kind, key, data, fetched_at from yahoo_snapshots
+    where user_guid = ${guid}
+      and (key = any(${[teamKey, leagueKey, ""]}) or key like ${`${teamKey}:%`})`;
+  return new Map<string, Row>(
+    rows.map((r) => [`${r.kind}|${r.key}`, { data: r.data, fetchedAt: new Date(r.fetched_at as string) }]),
+  );
+});
+
+async function readSaved(guid: string, kind: string, key: string): Promise<Row | undefined> {
+  const s = scope().team;
+  if (s && inScope(key, s)) return (await teamRows(guid, s.teamKey, s.leagueKey)).get(`${kind}|${key}`);
+  const rows = await db()!`
+    select data, fetched_at from yahoo_snapshots
+    where user_guid = ${guid} and kind = ${kind} and key = ${key}`;
+  return rows[0] ? { data: rows[0].data, fetchedAt: new Date(rows[0].fetched_at as string) } : undefined;
+}
+
 let warnedNoGuid = false;
 
 export async function cached<T>(opts: Options<T>, fetcher: () => Promise<T>): Promise<T> {
@@ -132,7 +171,9 @@ export async function cached<T>(opts: Options<T>, fetcher: () => Promise<T>): Pr
   const guid = sql ? (await getSession())?.guid : undefined;
   if (sql && !guid && !warnedNoGuid && process.env.NODE_ENV === "development") {
     warnedNoGuid = true;
-    console.warn("[snapshots] No Yahoo user ID in the session, so nothing is saved. Sign out and in again.");
+    console.warn(
+      "[snapshots] No Yahoo user ID in the session yet, so nothing is saved on this request. The proxy fills it in on the next page load.",
+    );
   }
   if (!sql || !guid) return fetcher();
 
@@ -142,11 +183,10 @@ export async function cached<T>(opts: Options<T>, fetcher: () => Promise<T>): Pr
 
   let saved: { data: T; fetchedAt: Date } | undefined;
   try {
-    const rows = await sql`
-      select data, fetched_at from yahoo_snapshots
-      where user_guid = ${guid} and kind = ${kind} and key = ${opts.key}`;
-    if (rows[0]) saved = { data: rows[0].data as T, fetchedAt: new Date(rows[0].fetched_at as string) };
+    saved = (await readSaved(guid, kind, opts.key)) as typeof saved;
   } catch (error) {
+    // A prefetch render being cut off isn't a database problem: let Next handle it.
+    rethrowNextErrors(error);
     console.error("[snapshots] read failed, calling Yahoo directly:", (error as Error).message);
     return fetcher();
   }
@@ -160,6 +200,7 @@ export async function cached<T>(opts: Options<T>, fetcher: () => Promise<T>): Pr
   try {
     data = await fetcher();
   } catch (error) {
+    rethrowNextErrors(error);
     // Yahoo is down or the session expired: an old snapshot beats an error page.
     if (saved) {
       if (track) noteAge(saved.fetchedAt);
@@ -175,6 +216,7 @@ export async function cached<T>(opts: Options<T>, fetcher: () => Promise<T>): Pr
       on conflict (user_guid, kind, key)
       do update set data = excluded.data, fetched_at = excluded.fetched_at`;
   } catch (error) {
+    rethrowNextErrors(error);
     console.error("[snapshots] write failed:", (error as Error).message);
   }
   if (track) noteAge(now);

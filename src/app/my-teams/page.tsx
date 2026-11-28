@@ -9,6 +9,7 @@ import { teamHref } from "@/lib/my-teams/sections";
 import { teamSlug } from "@/lib/my-teams/slug";
 import { getMyTeams, type YahooTeam } from "@/lib/yahoo/api";
 import { getSession } from "@/lib/yahoo/session";
+import { rethrowNextErrors } from "@/lib/next-errors";
 
 const app = getApp("my-teams");
 
@@ -43,6 +44,7 @@ async function OpenFirstTeam() {
   try {
     teams = await getMyTeams();
   } catch (error) {
+    rethrowNextErrors(error);
     return <LoadError error={error} what="your Yahoo teams" />;
   }
   if (!teams.length) {

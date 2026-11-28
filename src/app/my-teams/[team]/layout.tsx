@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { TeamChrome, TeamChromeSkeleton } from "@/components/my-teams/team-chrome";
+import {
+  BackLink,
+  TeamHeader,
+  TeamHeaderSkeleton,
+  TeamTabs,
+  TeamTabsPlaceholder,
+} from "@/components/my-teams/team-chrome";
 import { WarmTeam } from "@/components/my-teams/warm-team";
 import { PageTransition } from "@/components/page-transition";
 import { YAHOO_ATTRIBUTION } from "@/components/yahoo-ui";
@@ -13,8 +19,8 @@ export const metadata: Metadata = {
 };
 
 // Teams come from the visitor's Yahoo session, so they can't be listed with
-// generateStaticParams. The header streams in behind <Suspense>; tab-to-tab
-// navigations keep it mounted (see loading.tsx).
+// generateStaticParams. The header, tabs and each tab's content stream in
+// behind same-size placeholders; tab-to-tab navigations keep the header mounted.
 export const instant = false;
 
 export default function MyTeamLayout({ children, params }: LayoutProps<"/my-teams/[team]">) {
@@ -24,8 +30,12 @@ export default function MyTeamLayout({ children, params }: LayoutProps<"/my-team
         style={accentStyle(app)}
         className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-20 sm:px-6 sm:pt-8"
       >
-        <Suspense fallback={<TeamChromeSkeleton />}>
-          <TeamChrome params={params} />
+        <BackLink />
+        <Suspense fallback={<TeamHeaderSkeleton />}>
+          <TeamHeader params={params} />
+        </Suspense>
+        <Suspense fallback={<TeamTabsPlaceholder />}>
+          <TeamTabs params={params} />
         </Suspense>
         {/* Loads all four tabs' data on entering a team; renders nothing. */}
         <Suspense fallback={null}>

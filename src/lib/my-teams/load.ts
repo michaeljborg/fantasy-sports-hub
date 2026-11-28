@@ -1,7 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { getMyTeams, type YahooTeam } from "@/lib/yahoo/api";
 import { getSession } from "@/lib/yahoo/session";
+import { scopeToTeam } from "@/lib/yahoo/snapshots";
 import { leagueKeyOf, teamKeyFromSlug } from "./slug";
+import { rethrowNextErrors } from "@/lib/next-errors";
 
 export type TeamParams = Promise<{ team: string }>;
 
@@ -15,7 +17,10 @@ export async function teamFromParams(params: TeamParams) {
   if (!(await getSession())) redirect("/my-teams");
   const teamKey = teamKeyFromSlug(slug);
   if (!teamKey) notFound();
-  return { slug, teamKey, leagueKey: leagueKeyOf(teamKey) };
+  const leagueKey = leagueKeyOf(teamKey);
+  // The header, warm-up and tab then read all their saved data in one query.
+  scopeToTeam(teamKey, leagueKey);
+  return { slug, teamKey, leagueKey };
 }
 
 export type MyTeamResult =
@@ -33,6 +38,7 @@ export async function loadMyTeam(params: TeamParams): Promise<MyTeamResult> {
   try {
     teams = await getMyTeams();
   } catch (error) {
+    rethrowNextErrors(error);
     return { ok: false, slug, error };
   }
   const team = teams.find((t) => t.teamKey === teamKey);
