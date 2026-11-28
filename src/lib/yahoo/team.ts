@@ -11,6 +11,7 @@ import type { SportId } from "@/lib/fantasy/types";
 import { SPORT_BY_GAME_CODE } from "./api";
 import { YahooApiError, yahooGet } from "./client";
 import { child, fields, flag, list, num, str } from "./parse";
+import { cached } from "./snapshots";
 
 type Obj = Record<string, unknown>;
 export type Record3 = { w: number; l: number; t: number };
@@ -134,7 +135,7 @@ function parseStanding(team: Obj): StandingRow {
   };
 }
 
-export const getLeague = cache(async (leagueKey: string): Promise<LeagueInfo> => {
+async function fetchLeague(leagueKey: string): Promise<LeagueInfo> {
   const content = await yahooGet(`/league/${leagueKey};out=settings,standings`);
   const league = fields(content.league);
   const settings = fields(league.settings);
@@ -168,7 +169,7 @@ export const getLeague = cache(async (leagueKey: string): Promise<LeagueInfo> =>
     categories: parseCategories(settings),
     standings,
   };
-});
+}
 
 // ---------------------------------------------------------------------------
 // Season stats: every team's totals, ranked per category
@@ -210,7 +211,7 @@ function rankOf(mine: number | undefined, all: number[], higherIsBetter: boolean
   return 1 + all.filter((v) => (higherIsBetter ? v > mine : v < mine)).length;
 }
 
-export async function getSeasonStats(league: LeagueInfo, teamKey: string): Promise<SeasonStats> {
+async function computeSeasonStats(league: LeagueInfo, teamKey: string): Promise<SeasonStats> {
   const totals = await getLeagueTeamTotals(league.leagueKey);
   const mine = totals.get(teamKey);
   const others = [...totals.values()];
@@ -255,7 +256,7 @@ export type TeamDetails = {
   managers: { name: string; isCommissioner: boolean; isMe: boolean }[];
 };
 
-export const getTeamDetails = cache(async (teamKey: string): Promise<TeamDetails> => {
+async function fetchTeamDetails(teamKey: string): Promise<TeamDetails> {
   const team = fields((await yahooGet(`/team/${teamKey}`)).team);
   const adds = fields(team.roster_adds);
   const addsValue = num(adds.value);
@@ -282,7 +283,7 @@ export const getTeamDetails = cache(async (teamKey: string): Promise<TeamDetails
       }))
       .filter((m) => m.name),
   };
-});
+}
 
 // ---------------------------------------------------------------------------
 // This week's opponent (no scores: those belong to Weekly Matchup)
@@ -296,7 +297,7 @@ export type ThisWeek = {
   opponent: { teamKey: string; name: string; logoUrl?: string; manager?: string };
 };
 
-export const getThisWeek = cache(async (teamKey: string, week: number): Promise<ThisWeek | null> => {
+async function fetchThisWeek(teamKey: string, week: number): Promise<ThisWeek | null> {
   const team = fields((await yahooGet(`/team/${teamKey}/matchups;weeks=${week}`)).team);
   const matchup = fields(list(team.matchups, "matchup")[0]);
   const opponent = list(child(matchup, "teams"), "team")
@@ -315,7 +316,7 @@ export const getThisWeek = cache(async (teamKey: string, week: number): Promise<
       manager: managerOf(opponent),
     },
   };
-});
+}
 
 // ---------------------------------------------------------------------------
 // Roster
@@ -363,7 +364,7 @@ const playersOf = (collection: unknown) =>
   list(collection, "player").map(fields).map(parsePlayer).filter((p) => p.playerKey);
 
 /** The current roster with season stats. Falls back to the plain roster if Yahoo rejects the stats chain. */
-export const getRoster = cache(async (teamKey: string): Promise<RosterPlayer[]> => {
+async function fetchRoster(teamKey: string): Promise<RosterPlayer[]> {
   let content;
   try {
     content = await yahooGet(`/team/${teamKey}/roster/players/stats`);
@@ -373,7 +374,7 @@ export const getRoster = cache(async (teamKey: string): Promise<RosterPlayer[]> 
   }
   const roster = fields(content.team).roster;
   return playersOf(child(roster, "players"));
-});
+}
 
 // ---------------------------------------------------------------------------
 // Draft
@@ -400,7 +401,7 @@ async function getPlayers(leagueKey: string, keys: string[]) {
   );
 }
 
-export const getDraft = cache(async (teamKey: string, leagueKey: string): Promise<DraftPick[]> => {
+async function fetchDraft(teamKey: string, leagueKey: string): Promise<DraftPick[]> {
   const team = fields((await yahooGet(`/team/${teamKey}/draftresults`)).team);
   const picks = list(child(team, "draft_results") ?? child(team, "draftresults"), "draft_result")
     .map(fields)
@@ -416,7 +417,7 @@ export const getDraft = cache(async (teamKey: string, leagueKey: string): Promis
   return picks
     .map((d) => ({ ...d, player: players.get(d.playerKey) }))
     .sort((a, b) => (a.pick ?? 0) - (b.pick ?? 0));
-});
+}
 
 // ---------------------------------------------------------------------------
 // Transactions
@@ -494,7 +495,7 @@ async function transactions(path: string) {
 
 export type TeamActivity = { pending: Transaction[]; history: Transaction[] };
 
-export const getActivity = cache(async (teamKey: string, leagueKey: string): Promise<TeamActivity> => {
+async function fetchActivity(teamKey: string, leagueKey: string): Promise<TeamActivity> {
   const base = `/league/${leagueKey}/transactions`;
   const [history, pending] = await Promise.all([
     transactions(`${base};types=add,drop,trade;team_key=${teamKey}`).catch((error) => {
@@ -516,4 +517,50 @@ export const getActivity = cache(async (teamKey: string, leagueKey: string): Pro
       .sort((a, b) => (b.time ?? 0) - (a.time ?? 0))
       .slice(0, 50),
   };
-});
+}
+
+// ---------------------------------------------------------------------------
+// Public reads: saved in the database and refreshed weekly or hourly
+// (see ./snapshots). React cache() dedupes repeat calls within one render.
+// ---------------------------------------------------------------------------
+
+/** Settings and standings. Weekly; the sport comes from the saved league itself. */
+export const getLeague = cache((leagueKey: string) =>
+  cached({ kind: "league", key: leagueKey, tier: "weekly", sportOf: (l: LeagueInfo) => l.sport }, () =>
+    fetchLeague(leagueKey),
+  ),
+);
+
+/** Season totals and league rank per category. Weekly. */
+export const getSeasonStats = cache((league: LeagueInfo, teamKey: string) =>
+  cached({ kind: "season-stats", key: teamKey, tier: "weekly", sport: league.sport }, () =>
+    computeSeasonStats(league, teamKey),
+  ),
+);
+
+/** Waivers, moves, draft grade, managers. Weekly. */
+export const getTeamDetails = cache((teamKey: string, sport?: SportId) =>
+  cached({ kind: "team-details", key: teamKey, tier: "weekly", sport }, () => fetchTeamDetails(teamKey)),
+);
+
+/** This week's opponent. Weekly, keyed by week. */
+export const getThisWeek = cache((teamKey: string, week: number, sport?: SportId) =>
+  cached({ kind: "this-week", key: `${teamKey}:w${week}`, tier: "weekly", sport }, () =>
+    fetchThisWeek(teamKey, week),
+  ),
+);
+
+/** Draft picks with player names. Weekly (they never change after the draft). */
+export const getDraft = cache((teamKey: string, leagueKey: string, sport?: SportId) =>
+  cached({ kind: "draft", key: teamKey, tier: "weekly", sport }, () => fetchDraft(teamKey, leagueKey)),
+);
+
+/** Roster, injuries and season stats. Hourly: injuries and lineups change daily. */
+export const getRoster = cache((teamKey: string) =>
+  cached({ kind: "roster", key: teamKey, tier: "hourly" }, () => fetchRoster(teamKey)),
+);
+
+/** Moves and pending claims or offers. Hourly. */
+export const getActivity = cache((teamKey: string, leagueKey: string) =>
+  cached({ kind: "activity", key: teamKey, tier: "hourly" }, () => fetchActivity(teamKey, leagueKey)),
+);

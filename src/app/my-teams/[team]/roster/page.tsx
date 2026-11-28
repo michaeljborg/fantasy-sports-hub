@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { RosterList } from "@/components/my-teams/roster-list";
 import { Empty, LoadError } from "@/components/my-teams/states";
+import { DataAge } from "@/components/my-teams/data-age";
 import { PageTransition } from "@/components/page-transition";
 import { teamFromParams } from "@/lib/my-teams/load";
 import { getLeague, getRoster, isPointsLeague } from "@/lib/yahoo/team";
@@ -8,7 +9,7 @@ import { getLeague, getRoster, isPointsLeague } from "@/lib/yahoo/team";
 export const metadata: Metadata = { title: "Roster" };
 
 export default async function RosterPage({ params }: PageProps<"/my-teams/[team]/roster">) {
-  const { teamKey, leagueKey } = await teamFromParams(params);
+  const { slug, teamKey, leagueKey } = await teamFromParams(params);
 
   let data;
   try {
@@ -31,6 +32,7 @@ export default async function RosterPage({ params }: PageProps<"/my-teams/[team]
       ) : (
         <Empty title="No players yet">Your roster fills in after the draft.</Empty>
       )}
+      <DataAge slug={slug} />
     </PageTransition>
   );
 }

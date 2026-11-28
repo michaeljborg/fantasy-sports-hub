@@ -7,6 +7,7 @@ import { cache } from "react";
 import type { SportId } from "@/lib/fantasy/types";
 import { yahooGet } from "./client";
 import { fields, list, num, str } from "./parse";
+import { cached } from "./snapshots";
 
 /** Yahoo game codes for the sports this app supports. */
 export const SPORT_BY_GAME_CODE: Record<string, SportId> = {
@@ -70,12 +71,8 @@ function userGames(content: Record<string, unknown>) {
   return list(fields(user).games, "game").map(fields);
 }
 
-/**
- * Every current-season team the signed-in user manages in basketball,
- * football and hockey, with its league name. Cached per request, so the
- * layout and page share one set of Yahoo calls.
- */
-export const getMyTeams = cache(async (): Promise<YahooTeam[]> => {
+/** Fetches the team list from Yahoo (3 requests). Use getMyTeams(), which saves it. */
+async function fetchMyTeams(): Promise<YahooTeam[]> {
   const gameKeys = Object.keys(SPORT_BY_GAME_CODE).join(",");
   const [teamsContent, leaguesContent] = await Promise.all([
     yahooGet(`/users;use_login=1/games;game_keys=${gameKeys}/teams`),
@@ -119,4 +116,24 @@ export const getMyTeams = cache(async (): Promise<YahooTeam[]> => {
 
   const standings = await getStandings(teams.map((t) => t.teamKey));
   return teams.map((team) => ({ ...team, ...standings.get(team.teamKey) }));
-});
+}
+
+/**
+ * Every current-season team the signed-in user manages in basketball,
+ * football and hockey. Saved weekly (see ./snapshots): it refreshes after the
+ * latest week cutoff among the sports you play. Cached per request too, so the
+ * layout and page share one read.
+ */
+export const getMyTeams = cache(() =>
+  cached(
+    {
+      kind: "teams",
+      key: "",
+      tier: "weekly",
+      sportOf: (teams: YahooTeam[]) => [...new Set(teams.map((t) => t.sport))],
+      // The header's team list shouldn't set the page's "data from" time.
+      trackAge: false,
+    },
+    fetchMyTeams,
+  ),
+);

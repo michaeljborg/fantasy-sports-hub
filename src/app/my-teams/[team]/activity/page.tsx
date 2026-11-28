@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ActivityList } from "@/components/my-teams/activity-list";
 import { LoadError } from "@/components/my-teams/states";
+import { DataAge } from "@/components/my-teams/data-age";
 import { PageTransition } from "@/components/page-transition";
 import { teamFromParams } from "@/lib/my-teams/load";
 import { getActivity } from "@/lib/yahoo/team";
@@ -8,7 +9,7 @@ import { getActivity } from "@/lib/yahoo/team";
 export const metadata: Metadata = { title: "Activity" };
 
 export default async function ActivityPage({ params }: PageProps<"/my-teams/[team]/activity">) {
-  const { teamKey, leagueKey } = await teamFromParams(params);
+  const { slug, teamKey, leagueKey } = await teamFromParams(params);
 
   let activity;
   try {
@@ -20,6 +21,7 @@ export default async function ActivityPage({ params }: PageProps<"/my-teams/[tea
   return (
     <PageTransition>
       <ActivityList pending={activity.pending} history={activity.history} teamKey={teamKey} />
+      <DataAge slug={slug} />
     </PageTransition>
   );
 }

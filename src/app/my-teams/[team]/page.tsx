@@ -4,6 +4,7 @@ import { Standings } from "@/components/my-teams/standings";
 import { LoadError } from "@/components/my-teams/states";
 import { LeagueFacts, TeamStatus } from "@/components/my-teams/team-info";
 import { ThisWeekCard } from "@/components/my-teams/this-week-card";
+import { DataAge } from "@/components/my-teams/data-age";
 import { PageTransition } from "@/components/page-transition";
 import { teamFromParams } from "@/lib/my-teams/load";
 import {
@@ -22,16 +23,16 @@ async function loadOverview(teamKey: string, leagueKey: string) {
   const inSeason =
     isHeadToHead(league) && league.draftStatus === "postdraft" && !league.isFinished && !!league.currentWeek;
   const [details, season, thisWeek] = await Promise.all([
-    getTeamDetails(teamKey),
+    getTeamDetails(teamKey, league.sport),
     // Optional extras: the page still renders if either is rejected.
     getSeasonStats(league, teamKey).catch(() => null),
-    inSeason ? getThisWeek(teamKey, league.currentWeek!).catch(() => null) : null,
+    inSeason ? getThisWeek(teamKey, league.currentWeek!, league.sport).catch(() => null) : null,
   ]);
   return { league, details, season, thisWeek };
 }
 
 export default async function OverviewPage({ params }: PageProps<"/my-teams/[team]">) {
-  const { teamKey, leagueKey } = await teamFromParams(params);
+  const { slug, teamKey, leagueKey } = await teamFromParams(params);
 
   let data: Awaited<ReturnType<typeof loadOverview>>;
   try {
@@ -62,6 +63,7 @@ export default async function OverviewPage({ params }: PageProps<"/my-teams/[tea
         </div>
         {season && <SeasonStats stats={season} points={isPointsLeague(league)} />}
       </div>
+      <DataAge slug={slug} />
     </PageTransition>
   );
 }
