@@ -159,4 +159,4 @@ The cutoff is worked out with `Intl` (no time-zone library) and was tested acros
 2. Share league-wide snapshots across users before inviting league mates (D5).
 3. Don't cache error results in the private loaders (D4).
 4. Add tests (D12).
-5. Recreate `.env.example`. The README's setup step refers to it, but the file no longer exists.
+5. Optionally add an `.env.example` template. For now the README lists the variables directly.
